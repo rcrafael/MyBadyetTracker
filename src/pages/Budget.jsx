@@ -117,7 +117,20 @@ export default function Budget() {
         spendingMap[cat] = (spendingMap[cat] || 0) + (parseFloat(t.amount) || 0);
       });
 
-      const updatedBudgets = rawBudgets.map((b) => ({
+      // Ensure every category in rawCategories has a budget item (default initial limit: 0)
+      const allBudgets = [...rawBudgets];
+      for (const cat of rawCategories) {
+        if (!allBudgets.some((b) => b.category === cat.id)) {
+          allBudgets.push({
+            id: `bg_${cat.id}`,
+            category: cat.id,
+            limit: 0,
+            period: 'monthly',
+          });
+        }
+      }
+
+      const updatedBudgets = allBudgets.map((b) => ({
         ...b,
         spent: spendingMap[b.category] || 0,
       }));
@@ -138,7 +151,7 @@ export default function Budget() {
       setBudgets((prev) =>
         prev.map((b) =>
           b.id === editingBudget.id || b.category === editingBudget.category
-            ? { ...b, limit: parseFloat(editingBudget.limit) }
+            ? { ...b, limit: parseFloat(editingBudget.limit) || 0 }
             : b
         )
       );
@@ -153,13 +166,16 @@ export default function Budget() {
     e.preventDefault();
     if (!newCategory || !newLimit) return;
     try {
+      const existingSpent = budgets.find((b) => b.category === newCategory)?.spent || 0;
       const saved = await saveBudgetToFirestore({
         category: newCategory,
-        limit: parseFloat(newLimit),
-        spent: 0,
+        limit: parseFloat(newLimit) || 0,
         period: 'monthly',
       });
-      setBudgets((prev) => [...prev.filter((b) => b.category !== newCategory), saved]);
+      setBudgets((prev) => [
+        ...prev.filter((b) => b.category !== newCategory),
+        { ...saved, spent: existingSpent },
+      ]);
       setIsAddBudgetOpen(false);
       setNewCategory('');
       setNewLimit('');

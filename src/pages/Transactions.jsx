@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   getTransactionsFromFirestore,
+  getCategoriesFromFirestore,
   softDeleteTransactionInFirestore,
   restoreTransactionInFirestore,
   updateTransactionInFirestore,
@@ -15,6 +16,7 @@ import { useCurrency } from '../context/CurrencyContext';
 export default function Transactions() {
   const { currencyInfo, formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState(CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -29,8 +31,14 @@ export default function Transactions() {
   async function loadTransactions() {
     setLoading(true);
     try {
-      const data = await getTransactionsFromFirestore();
+      const [data, cats] = await Promise.all([
+        getTransactionsFromFirestore(),
+        getCategoriesFromFirestore(),
+      ]);
       setTransactions(data);
+      if (cats && cats.length > 0) {
+        setCategories(cats);
+      }
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
     } finally {
@@ -40,7 +48,7 @@ export default function Transactions() {
 
   const filters = [
     { id: 'all', label: 'All' },
-    ...CATEGORIES.slice(0, 5).map((c) => ({ id: c.id, label: c.name })),
+    ...categories.map((c) => ({ id: c.id, label: c.name })),
   ];
 
   const filtered = useMemo(() => {
@@ -189,7 +197,7 @@ export default function Transactions() {
                   }
                   className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary"
                 >
-                  {CATEGORIES.map((c) => (
+                  {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -307,7 +315,7 @@ export default function Transactions() {
               </h3>
               <div className="space-y-2">
                 {items.map((t) => {
-                  const cat = getCategoryById(t.category);
+                  const cat = getCategoryById(t.category, categories);
                   return (
                     <div
                       key={t.id}

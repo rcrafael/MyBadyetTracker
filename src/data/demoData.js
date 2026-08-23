@@ -203,8 +203,22 @@ export const DASHBOARD_SUMMARY = {
   currentSavings: 3250,
 };
 
-export function getCategoryById(id) {
-  return CATEGORIES.find(c => c.id === id) || CATEGORIES[0];
+export function getCategoryById(id, customCategories = []) {
+  if (customCategories && customCategories.length > 0) {
+    const found = customCategories.find((c) => c.id === id);
+    if (found) return found;
+  }
+  const defaultCat = CATEGORIES.find((c) => c.id === id);
+  if (defaultCat) return defaultCat;
+
+  // Fallback for custom or dynamic categories
+  return {
+    id: id || 'other',
+    name: id ? id.charAt(0).toUpperCase() + id.slice(1).replace(/[-_]/g, ' ') : 'General',
+    icon: 'category',
+    color: 'bg-secondary-container',
+    textColor: 'text-on-secondary-container',
+  };
 }
 
 export function formatCurrency(amount, currencyCode = null) {

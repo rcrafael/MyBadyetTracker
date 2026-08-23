@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   getTransactionsFromFirestore,
   getBudgetsFromFirestore,
+  getCategoriesFromFirestore,
 } from '../services/firestoreService';
 import { getCategoryById } from '../data/demoData';
 import { useCurrency } from '../context/CurrencyContext';
@@ -161,7 +162,7 @@ function SpendingChart({ transactions }) {
   );
 }
 
-function RecentExpenses({ transactions }) {
+function RecentExpenses({ transactions, categories = [] }) {
   const navigate = useNavigate();
   const { formatCurrency } = useCurrency();
   const recent = transactions.slice(0, 4);
@@ -200,7 +201,7 @@ function RecentExpenses({ transactions }) {
           </div>
         ) : (
           recent.map((t) => {
-            const cat = getCategoryById(t.category);
+            const cat = getCategoryById(t.category, categories);
             return (
               <div
                 key={t.id}
@@ -244,18 +245,21 @@ function RecentExpenses({ transactions }) {
 export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
-        const [txs, bgs] = await Promise.all([
+        const [txs, bgs, cats] = await Promise.all([
           getTransactionsFromFirestore(),
           getBudgetsFromFirestore(),
+          getCategoriesFromFirestore(),
         ]);
         setTransactions(txs);
         setBudgets(bgs);
+        setCategories(cats);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
       } finally {
@@ -319,8 +323,8 @@ export default function Dashboard() {
       {/* Chart */}
       <SpendingChart transactions={transactions} />
 
-      {/* Recent Expenses */}
-      <RecentExpenses transactions={transactions} />
+      {/* Recent Expenses List */}
+      <RecentExpenses transactions={transactions} categories={categories} />
     </div>
   );
 }
