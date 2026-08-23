@@ -143,7 +143,7 @@ export default function Budget() {
         )
       );
       setEditingBudget(null);
-      showToast('Budget limit updated in Cloud Firestore!');
+      showToast('Budget limit updated!');
     } catch (err) {
       showToast('Failed to save budget.', true);
     }
@@ -163,7 +163,7 @@ export default function Budget() {
       setIsAddBudgetOpen(false);
       setNewCategory('');
       setNewLimit('');
-      showToast('New category budget created in Firestore!');
+      showToast('New category budget created!');
     } catch (err) {
       showToast('Failed to create budget.', true);
     }
@@ -183,9 +183,8 @@ export default function Budget() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${
-            toastMessage.isError ? 'bg-error text-white' : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-          }`}
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${toastMessage.isError ? 'bg-error text-white' : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
+            }`}
         >
           <span>{toastMessage.text}</span>
         </div>
