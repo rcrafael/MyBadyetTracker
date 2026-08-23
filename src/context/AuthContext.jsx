@@ -7,6 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile,
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -83,6 +85,19 @@ export function AuthProvider({ children }) {
     return res.user;
   };
 
+  const sendPasswordReset = async (email) => {
+    return sendPasswordResetEmail(auth, email);
+  };
+
+  const checkSignInMethods = async (email) => {
+    try {
+      return await fetchSignInMethodsForEmail(auth, email);
+    } catch (err) {
+      console.warn('Error checking sign in methods:', err);
+      return [];
+    }
+  };
+
   const signOut = async () => {
     return firebaseSignOut(auth);
   };
@@ -95,6 +110,8 @@ export function AuthProvider({ children }) {
         signInWithGoogle,
         loginWithEmail,
         registerWithEmail,
+        sendPasswordReset,
+        checkSignInMethods,
         signOut,
         isAuthenticated: Boolean(user),
       }}
@@ -109,3 +126,4 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
+
