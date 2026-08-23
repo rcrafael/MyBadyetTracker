@@ -1,4 +1,4 @@
-# 💰 MyBadyetTracker
+# 💰 My Badyet Tracker
 
 > **A modern, intelligent personal finance and expense tracking application built entirely with Agentic AI.**
 
