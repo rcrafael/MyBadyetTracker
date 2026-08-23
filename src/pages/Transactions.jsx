@@ -8,11 +8,12 @@ import {
 import {
   CATEGORIES,
   getCategoryById,
-  formatCurrency,
   groupTransactionsByDate,
 } from '../data/demoData';
+import { useCurrency } from '../context/CurrencyContext';
 
 export default function Transactions() {
+  const { currencyInfo, formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -164,7 +165,9 @@ export default function Transactions() {
               </div>
 
               <div>
-                <label className="text-on-surface-variant font-semibold block mb-1">Amount ($)</label>
+                <label className="text-on-surface-variant font-semibold block mb-1">
+                  Amount ({currencyInfo.symbol})
+                </label>
                 <input
                   type="number"
                   step="0.01"

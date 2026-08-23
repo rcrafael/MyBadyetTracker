@@ -4,9 +4,11 @@ import {
   getTransactionsFromFirestore,
   getBudgetsFromFirestore,
 } from '../services/firestoreService';
-import { getCategoryById, formatCurrency } from '../data/demoData';
+import { getCategoryById } from '../data/demoData';
+import { useCurrency } from '../context/CurrencyContext';
 
 function SpendingCards({ summary }) {
+  const { formatCurrency } = useCurrency();
   const budgetProgress =
     summary.monthlyBudget > 0
       ? Math.min(Math.round((summary.monthlySpending / summary.monthlyBudget) * 100), 100)
@@ -78,6 +80,7 @@ function SpendingCards({ summary }) {
 }
 
 function SpendingChart({ transactions }) {
+  const { currencyInfo } = useCurrency();
   const [animated, setAnimated] = useState(false);
 
   // Generate the last 5 calendar months dynamically (e.g. ['APR', 'MAY', 'JUN', 'JUL', 'AUG'])
@@ -139,7 +142,7 @@ function SpendingChart({ transactions }) {
                 />
                 {item.amount > 0 && (
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1.5 py-0.5 rounded-md font-bold whitespace-nowrap shadow-xs font-mono">
-                    ${item.amount >= 1000 ? `${(item.amount / 1000).toFixed(1)}k` : Math.round(item.amount)}
+                    {currencyInfo.symbol}{item.amount >= 1000 ? `${(item.amount / 1000).toFixed(1)}k` : Math.round(item.amount)}
                   </div>
                 )}
               </div>
@@ -160,6 +163,7 @@ function SpendingChart({ transactions }) {
 
 function RecentExpenses({ transactions }) {
   const navigate = useNavigate();
+  const { formatCurrency } = useCurrency();
   const recent = transactions.slice(0, 4);
 
   return (

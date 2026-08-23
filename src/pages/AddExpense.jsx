@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../data/demoData';
 import { addTransactionToFirestore } from '../services/firestoreService';
+import { useCurrency } from '../context/CurrencyContext';
 
 export default function AddExpense() {
   const navigate = useNavigate();
+  const { currencyInfo } = useCurrency();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('grocery');
@@ -58,7 +60,7 @@ export default function AddExpense() {
         </label>
         <div className="flex items-center justify-center w-full max-w-xs">
           <span className="text-3xl sm:text-4xl font-headline font-bold text-on-surface-variant mr-1 select-none">
-            $
+            {currencyInfo.symbol}
           </span>
           <input
             id="amount-input"
