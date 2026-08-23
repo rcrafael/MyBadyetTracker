@@ -141,7 +141,7 @@ export default function Bills() {
       showToast(
         bill.recurring
           ? `Bill marked as paid! Next month's cycle scheduled.`
-          : 'Bill marked as paid in Cloud Firestore!'
+          : 'Bill marked as paid!'
       );
     } catch (err) {
       showToast('Error updating bill.', true);
@@ -177,7 +177,7 @@ export default function Bills() {
       setNewBillAmount('');
       setNewBillNote('');
       setNewBillRecurring(true);
-      showToast('New bill added to Cloud Firestore!');
+      showToast('New bill added!');
     } catch (err) {
       showToast('Failed to create bill.', true);
     }
@@ -203,9 +203,8 @@ export default function Bills() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${
-            toastMessage.isError ? 'bg-error text-white' : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-          }`}
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${toastMessage.isError ? 'bg-error text-white' : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
+            }`}
         >
           <span>{toastMessage.text}</span>
         </div>
@@ -278,14 +277,12 @@ export default function Bills() {
                 <button
                   type="button"
                   onClick={() => setNewBillRecurring(!newBillRecurring)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    newBillRecurring ? 'bg-secondary' : 'bg-surface-dim dark:bg-surface-container-highest'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${newBillRecurring ? 'bg-secondary' : 'bg-surface-dim dark:bg-surface-container-highest'
+                    }`}
                 >
                   <span
-                    className={`${
-                      newBillRecurring ? 'translate-x-5' : 'translate-x-0'
-                    } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out`}
+                    className={`${newBillRecurring ? 'translate-x-5' : 'translate-x-0'
+                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out`}
                   />
                 </button>
               </div>
@@ -360,11 +357,10 @@ export default function Bills() {
             <button
               key={f}
               onClick={() => setActiveFilter(filterKey)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${
-                isSelected
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${isSelected
                   ? 'bg-primary text-white dark:bg-primary-fixed dark:text-primary-container shadow-xs'
                   : 'bg-surface-container-high/60 text-on-surface-variant hover:bg-surface-container'
-              }`}
+                }`}
             >
               {f}
             </button>

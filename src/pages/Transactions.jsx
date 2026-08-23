@@ -98,7 +98,7 @@ export default function Transactions() {
         prev.map((t) => (t.id === editingTransaction.id ? { ...t, ...editingTransaction } : t))
       );
       setEditingTransaction(null);
-      showToast('Transaction updated in Firestore!');
+      showToast('Transaction updated!');
     } catch (err) {
       showToast('Error updating transaction.', true);
     }
@@ -114,11 +114,11 @@ export default function Transactions() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${
-            toastMessage.isError
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold 
+            ${toastMessage.isError
               ? 'bg-error text-white'
               : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-          }`}
+            }`}
         >
           <span className="truncate pr-2">{toastMessage.text}</span>
           {lastDeletedId && (
@@ -272,11 +272,10 @@ export default function Transactions() {
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${
-                isSelected
-                  ? 'bg-secondary text-white shadow-xs'
-                  : 'bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container'
-              }`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${isSelected
+                ? 'bg-secondary text-white shadow-xs'
+                : 'bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container'
+                }`}
             >
               {f.label}
             </button>

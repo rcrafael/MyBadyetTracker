@@ -39,14 +39,12 @@ function Toggle({ enabled, onChange }) {
     <button
       type="button"
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-        enabled ? 'bg-secondary' : 'bg-surface-dim dark:bg-surface-container-highest'
-      }`}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${enabled ? 'bg-secondary' : 'bg-surface-dim dark:bg-surface-container-highest'
+        }`}
     >
       <span
-        className={`${
-          enabled ? 'translate-x-5' : 'translate-x-0'
-        } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out`}
+        className={`${enabled ? 'translate-x-5' : 'translate-x-0'
+          } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out`}
       />
     </button>
   );
@@ -135,11 +133,10 @@ export default function Settings() {
       {/* Toast Notification */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${
-            toastMessage.isError
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${toastMessage.isError
               ? 'bg-error text-white'
               : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-          }`}
+            }`}
         >
           <span>{toastMessage.text}</span>
         </div>
@@ -188,11 +185,10 @@ export default function Settings() {
                     key={c.code}
                     type="button"
                     onClick={() => handleSelectCurrency(c.code)}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all ${
-                      isSelected
+                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all ${isSelected
                         ? 'bg-secondary/15 border border-secondary text-on-surface font-semibold shadow-xs'
                         : 'bg-surface-container/40 hover:bg-surface-container border border-transparent text-on-surface'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xl shrink-0 select-none">{c.flag}</span>
@@ -408,8 +404,7 @@ export default function Settings() {
 
       {/* Footer Info */}
       <div className="text-center py-2">
-        <p className="text-xs font-mono font-medium text-outline">MyBadyetTracker v1.0.0</p>
-        <p className="text-[11px] text-outline/70 mt-0.5">Automated 6-Month Data Retention</p>
+        <p className="text-xs font-mono font-medium text-outline">My Badyet Tracker v1.0.0</p>
       </div>
     </div>
   );

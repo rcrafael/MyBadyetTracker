@@ -17,7 +17,7 @@ export default function TopBar() {
             account_balance_wallet
           </span>
           <h1 className="font-headline text-lg sm:text-xl font-bold text-secondary tracking-tight">
-            MyBadyetTracker
+            My Badyet Tracker
           </h1>
         </div>
 
