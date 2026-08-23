@@ -33,11 +33,30 @@ export async function addCategoryToFirestore(category, userId = null) {
     const data = {
       name: category.name,
       icon: category.icon || 'category',
-      color: category.color || 'bg-surface-container',
-      textColor: category.textColor || 'text-on-surface',
+      color: category.color || 'bg-secondary-container',
+      textColor: category.textColor || 'text-on-secondary-container',
       createdAt: new Date().toISOString(),
     };
     await setDoc(docRef, data);
+
+    // Automatically initialize budget document for this category with initial limit 0
+    try {
+      const budgetDocId = `bg_${docId}`;
+      const budgetDocRef = getUserDoc('budgets', budgetDocId, userId);
+      await setDoc(
+        budgetDocRef,
+        {
+          category: docId,
+          limit: 0,
+          period: 'monthly',
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (bErr) {
+      console.warn('Could not initialize budget for new category:', bErr);
+    }
+
     return { id: docId, ...data };
   } catch (error) {
     console.error('Error adding category:', error);

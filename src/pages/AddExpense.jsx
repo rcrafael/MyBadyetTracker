@@ -1,20 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CATEGORIES } from '../data/demoData';
-import { addTransactionToFirestore } from '../services/firestoreService';
+import { getCategoriesFromFirestore, addTransactionToFirestore } from '../services/firestoreService';
+import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 
 export default function AddExpense() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { currencyInfo } = useCurrency();
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('grocery');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [recurring, setRecurring] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadCategories() {
+      setLoadingCategories(true);
+      try {
+        const data = await getCategoriesFromFirestore(user?.uid);
+        setCategories(data);
+        if (data && data.length > 0) {
+          setSelectedCategory(data[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+    loadCategories();
+  }, [user]);
 
   const handleSave = async (e) => {
     e?.preventDefault();
@@ -22,11 +43,15 @@ export default function AddExpense() {
     setSaving(true);
     setError(null);
 
+    const chosenCat = selectedCategory || (categories[0]?.id || 'other');
+    const matchedCategory = categories.find((c) => c.id === chosenCat);
+    const catName = matchedCategory ? matchedCategory.name : chosenCat;
+
     try {
       await addTransactionToFirestore({
         amount: parseFloat(amount),
-        description: description.trim() || `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Expense`,
-        category: selectedCategory,
+        description: description.trim() || `${catName.charAt(0).toUpperCase() + catName.slice(1)} Expense`,
+        category: chosenCat,
         date,
         time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
         recurring,
@@ -97,32 +122,44 @@ export default function AddExpense() {
 
       {/* Category Selector */}
       <section className="space-y-2">
-        <label className="text-sm font-bold text-on-surface block px-1">
-          Category
-        </label>
+        <div className="flex justify-between items-center px-1">
+          <label className="text-sm font-bold text-on-surface block">
+            Category
+          </label>
+          <span className="text-xs text-on-surface-variant font-medium">
+            {categories.find((c) => c.id === selectedCategory)?.name || ''}
+          </span>
+        </div>
         <div className="flex gap-3 overflow-x-auto hide-scrollbar py-1 px-1 -mx-1">
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                type="button"
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex flex-col items-center justify-center min-w-[76px] w-[76px] h-20 rounded-2xl shrink-0 transition-all border-2 active:scale-95 ${
-                  isSelected
-                    ? 'bg-secondary-container text-on-secondary-container border-secondary shadow-sm font-semibold'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-transparent hover:bg-surface-container/60'
-                }`}
-              >
-                <span className={`material-symbols-outlined text-2xl mb-1 ${isSelected ? 'filled' : ''}`}>
-                  {cat.icon}
-                </span>
-                <span className="text-xs leading-none tracking-tight truncate max-w-[68px] px-1 text-center">
-                  {cat.name}
-                </span>
-              </button>
-            );
-          })}
+          {loadingCategories ? (
+            <div className="flex items-center gap-2 py-4 px-2 text-xs text-outline">
+              <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+              <span>Loading categories...</span>
+            </div>
+          ) : (
+            categories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  type="button"
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex flex-col items-center justify-center min-w-[76px] w-[76px] h-20 rounded-2xl shrink-0 transition-all border-2 active:scale-95 ${
+                    isSelected
+                      ? 'bg-secondary-container text-on-secondary-container border-secondary shadow-sm font-semibold'
+                      : 'bg-surface-container-lowest text-on-surface-variant border-transparent hover:bg-surface-container/60'
+                  }`}
+                >
+                  <span className={`material-symbols-outlined text-2xl mb-1 ${isSelected ? 'filled' : ''}`}>
+                    {cat.icon || 'category'}
+                  </span>
+                  <span className="text-xs leading-none tracking-tight truncate max-w-[68px] px-1 text-center">
+                    {cat.name}
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
       </section>
 
