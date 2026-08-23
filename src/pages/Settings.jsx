@@ -6,6 +6,7 @@ import {
 } from '../services/firestoreService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 function SettingsItem({ icon, label, subtitle, trailing, onClick }) {
   return (
@@ -55,10 +56,13 @@ export default function Settings() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { currency, currencyInfo, currencies, setCurrency } = useCurrency();
 
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState(true);
   const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('category');
   const [toastMessage, setToastMessage] = useState(null);
@@ -98,6 +102,13 @@ export default function Settings() {
     }
   };
 
+  const handleSelectCurrency = (code) => {
+    const selected = currencies.find((c) => c.code === code);
+    setCurrency(code);
+    setIsCurrencyModalOpen(false);
+    showToast(`Currency updated to ${selected?.name || code} (${selected?.symbol || code})`);
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -112,6 +123,13 @@ export default function Settings() {
     setTimeout(() => setToastMessage(null), 4000);
   }
 
+  const filteredCurrencies = currencies.filter(
+    (c) =>
+      c.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
+      c.code.toLowerCase().includes(currencySearch.toLowerCase()) ||
+      c.symbol.toLowerCase().includes(currencySearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-5 pb-6">
       {/* Toast Notification */}
@@ -124,6 +142,100 @@ export default function Settings() {
           }`}
         >
           <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* Currency Selection Modal */}
+      {isCurrencyModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="app-card max-w-md w-full space-y-4 shadow-2xl border-secondary/40 max-h-[85vh] flex flex-col">
+            <div className="flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="font-headline text-base font-bold text-on-surface">Select Currency</h3>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Choose the currency used for all expenses, budgets, and bills
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCurrencyModalOpen(false)}
+                className="text-outline hover:text-on-surface p-1 rounded-lg"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative shrink-0">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">
+                search
+              </span>
+              <input
+                type="text"
+                value={currencySearch}
+                onChange={(e) => setCurrencySearch(e.target.value)}
+                placeholder="Search currency by name, code or symbol (e.g. USD, ₱, Euro)..."
+                className="w-full bg-surface-container pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm text-on-surface placeholder:text-outline/70 border border-outline-variant/30 outline-none focus:ring-1 focus:ring-secondary"
+              />
+            </div>
+
+            {/* Currencies List */}
+            <div className="overflow-y-auto space-y-1.5 flex-1 pr-1 max-h-80 custom-scrollbar">
+              {filteredCurrencies.map((c) => {
+                const isSelected = c.code === currency;
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => handleSelectCurrency(c.code)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all ${
+                      isSelected
+                        ? 'bg-secondary/15 border border-secondary text-on-surface font-semibold shadow-xs'
+                        : 'bg-surface-container/40 hover:bg-surface-container border border-transparent text-on-surface'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xl shrink-0 select-none">{c.flag}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm font-bold text-on-surface">
+                            {c.code}
+                          </span>
+                          <span className="text-xs font-mono px-1.5 py-0.2 bg-surface-container-high rounded text-on-surface-variant font-medium">
+                            {c.symbol}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-on-surface-variant block truncate">
+                          {c.name}
+                        </span>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-secondary text-lg shrink-0">
+                        check_circle
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {filteredCurrencies.length === 0 && (
+                <div className="text-center py-8 text-on-surface-variant text-xs">
+                  No currencies match "{currencySearch}"
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsCurrencyModalOpen(false)}
+                className="w-full py-2.5 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -272,10 +384,16 @@ export default function Settings() {
           <SettingsItem
             icon="attach_money"
             label="Currency"
+            subtitle={`${currencyInfo.name} (${currencyInfo.symbol})`}
+            onClick={() => setIsCurrencyModalOpen(true)}
             trailing={
-              <span className="text-xs font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">
-                USD ($)
-              </span>
+              <div className="flex items-center gap-1.5 bg-surface-container hover:bg-surface-container-high px-2.5 py-1 rounded-lg border border-outline-variant/30 transition-colors">
+                <span className="text-sm">{currencyInfo.flag}</span>
+                <span className="text-xs font-bold text-on-surface">
+                  {currencyInfo.code} ({currencyInfo.symbol})
+                </span>
+                <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
+              </div>
             }
           />
           <SettingsItem

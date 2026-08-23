@@ -5,9 +5,10 @@ import {
   getCategoriesFromFirestore,
   saveBudgetToFirestore,
 } from '../services/firestoreService';
-import { formatCurrency } from '../data/demoData';
+import { useCurrency } from '../context/CurrencyContext';
 
 function BudgetCard({ budget, categoryMeta, onEdit }) {
+  const { formatCurrency } = useCurrency();
   const catName = categoryMeta?.name || budget.category;
   const catColor = categoryMeta?.color || 'bg-surface-container';
   const catTextColor = categoryMeta?.textColor || 'text-on-surface';
@@ -81,6 +82,7 @@ function BudgetCard({ budget, categoryMeta, onEdit }) {
 }
 
 export default function Budget() {
+  const { currencyInfo, formatCurrency } = useCurrency();
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +214,7 @@ export default function Budget() {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="text-on-surface-variant font-semibold block mb-1">
-                  Monthly Spending Limit ($)
+                  Monthly Spending Limit ({currencyInfo.symbol})
                 </label>
                 <input
                   type="number"
@@ -289,7 +291,7 @@ export default function Budget() {
 
               <div>
                 <label className="text-on-surface-variant font-semibold block mb-1">
-                  Monthly Limit ($)
+                  Monthly Limit ({currencyInfo.symbol})
                 </label>
                 <input
                   type="number"

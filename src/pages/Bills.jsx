@@ -5,9 +5,10 @@ import {
   payBillInFirestore,
   softDeleteBillInFirestore,
 } from '../services/firestoreService';
-import { formatCurrency } from '../data/demoData';
+import { useCurrency } from '../context/CurrencyContext';
 
 function BillCard({ bill, onPay, onDelete }) {
+  const { formatCurrency } = useCurrency();
   const statusConfig = {
     overdue: {
       borderColor: 'border-l-error',
@@ -28,10 +29,10 @@ function BillCard({ bill, onPay, onDelete }) {
     paid: {
       borderColor: 'border-l-success',
       iconBg: 'bg-secondary-container/40',
-      iconColor: 'text-on-secondary-container',
+      iconColor: 'text-secondary',
       icon: 'check_circle',
       statusText: 'Paid',
-      statusColor: 'text-success',
+      statusColor: 'text-secondary',
     },
   };
 
@@ -39,21 +40,19 @@ function BillCard({ bill, onPay, onDelete }) {
 
   return (
     <div
-      className={`app-card border-l-4 ${config.borderColor} flex items-center justify-between gap-3 p-3.5 sm:p-4 hover:-translate-y-0.5 transition-all group`}
+      className={`app-card border-l-4 ${config.borderColor} flex items-center justify-between p-3.5 hover:bg-surface-container/40 transition-all duration-150 group`}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className={`w-11 h-11 ${config.iconBg} flex items-center justify-center rounded-xl shrink-0`}>
-          <span className={`material-symbols-outlined filled text-xl ${config.iconColor}`}>
-            {config.icon}
-          </span>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`w-10 h-10 rounded-full ${config.iconBg} ${config.iconColor} flex items-center justify-center shrink-0`}>
+          <span className="material-symbols-outlined text-xl">{config.icon}</span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="text-sm font-semibold text-on-surface truncate">{bill.name}</h3>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-bold text-on-surface truncate">{bill.name}</span>
             {bill.recurring && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-secondary-container/60 text-on-secondary-container shrink-0">
-                <span className="material-symbols-outlined text-[12px]">repeat</span>
-                <span>Monthly</span>
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-surface-container px-1.5 py-0.5 rounded text-outline shrink-0">
+                <span className="material-symbols-outlined text-xs">repeat</span>
+                Monthly
               </span>
             )}
           </div>
@@ -83,7 +82,7 @@ function BillCard({ bill, onPay, onDelete }) {
             onClick={() => onDelete?.(bill.id, bill.name)}
             className="p-1 text-outline hover:text-error rounded-md hover:bg-error-container/20 opacity-70 group-hover:opacity-100 transition-opacity"
           >
-            <span className="material-symbols-outlined text-lg">delete</span>
+            <span className="material-symbols-outlined text-base">delete</span>
           </button>
         </div>
       </div>
@@ -92,6 +91,7 @@ function BillCard({ bill, onPay, onDelete }) {
 }
 
 export default function Bills() {
+  const { currencyInfo, formatCurrency } = useCurrency();
   const [billsList, setBillsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -243,7 +243,9 @@ export default function Bills() {
               </div>
 
               <div>
-                <label className="text-on-surface-variant font-semibold block mb-1">Amount ($)</label>
+                <label className="text-on-surface-variant font-semibold block mb-1">
+                  Amount ({currencyInfo.symbol})
+                </label>
                 <input
                   type="number"
                   step="0.01"

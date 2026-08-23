@@ -207,11 +207,17 @@ export function getCategoryById(id) {
   return CATEGORIES.find(c => c.id === id) || CATEGORIES[0];
 }
 
-export function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+export function formatCurrency(amount, currencyCode = null) {
+  const code = currencyCode || (typeof window !== 'undefined' ? localStorage.getItem('mybadyet_currency') : null) || 'USD';
+  const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: code,
+    }).format(num);
+  } catch {
+    return `${code} ${num.toFixed(2)}`;
+  }
 }
 
 export function formatDate(dateStr) {
