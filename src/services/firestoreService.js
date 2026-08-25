@@ -30,6 +30,8 @@ export {
   updateBillInFirestore,
   payBillInFirestore,
   softDeleteBillInFirestore,
+  computeInstallmentEndDate,
+  generateInstallmentSchedule,
 } from './firestore/billService';
 
 // 4. Budgets & Limits (Budget page, Dashboard)
