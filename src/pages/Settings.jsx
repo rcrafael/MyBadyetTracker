@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useInstall } from '../context/InstallContext';
 
 function SettingsItem({ icon, label, subtitle, trailing, onClick }) {
   return (
@@ -55,6 +56,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { currency, currencyInfo, currencies, setCurrency } = useCurrency();
+  const { isStandalone, platform, openInstallModal } = useInstall();
 
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState(true);
@@ -390,6 +392,33 @@ export default function Settings() {
                 </span>
                 <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
               </div>
+            }
+          />
+          <SettingsItem
+            icon={platform === 'ios' ? 'phone_iphone' : 'add_to_home_screen'}
+            label="Home Screen Shortcut"
+            subtitle={
+              isStandalone
+                ? 'Active as installed app'
+                : platform === 'ios'
+                ? 'Add shortcut to iPhone / iPad'
+                : platform === 'android'
+                ? 'Install app on Android'
+                : 'Install app shortcut'
+            }
+            onClick={openInstallModal}
+            trailing={
+              isStandalone ? (
+                <div className="flex items-center gap-1 text-xs font-semibold text-secondary bg-secondary/15 px-2.5 py-1 rounded-lg">
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  <span>Installed</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-secondary text-white hover:bg-secondary/90 px-3 py-1 rounded-lg text-xs font-semibold shadow-xs transition-colors">
+                  <span>{platform === 'ios' ? 'How to Add' : 'Install'}</span>
+                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                </div>
+              )
             }
           />
           <SettingsItem

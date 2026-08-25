@@ -1,0 +1,27 @@
+{
+  "name": "MyBadyetTracker - Smart Personal Expense & Budget Tracker",
+  "short_name": "MyBadyet",
+  "description": "Smart personal expense, budget, and bills tracker designed for financial clarity.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#f8f9ff",
+  "theme_color": "#0d9488",
+  "orientation": "portrait",
+  "scope": "/",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

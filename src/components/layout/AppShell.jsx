@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
+import InstallSuggestionBanner from '../pwa/InstallSuggestionBanner';
+import InstallPromptModal from '../pwa/InstallPromptModal';
 
 export default function AppShell() {
   return (
@@ -11,6 +13,8 @@ export default function AppShell() {
           <Outlet />
         </div>
       </main>
+      <InstallSuggestionBanner />
+      <InstallPromptModal />
       <BottomNav />
     </div>
   );
