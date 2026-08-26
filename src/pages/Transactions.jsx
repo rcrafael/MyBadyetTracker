@@ -12,9 +12,15 @@ import {
   groupTransactionsByDate,
 } from '../data/demoData';
 import { useCurrency } from '../context/CurrencyContext';
+import DualCurrencyDisplay from '../components/common/DualCurrencyDisplay';
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
 
 export default function Transactions() {
-  const { currencyInfo, formatCurrency } = useCurrency();
+  const { mainCurrency, formatCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState(CATEGORIES);
   const [loading, setLoading] = useState(true);
@@ -23,6 +29,13 @@ export default function Transactions() {
   const [toastMessage, setToastMessage] = useState(null);
   const [lastDeletedId, setLastDeletedId] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
+
+  // Month Picker State
+  const now = useMemo(() => new Date(), []);
+  const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(defaultYearMonth); // 'YYYY-MM' | 'all'
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(now.getFullYear());
 
   useEffect(() => {
     loadTransactions();
@@ -46,13 +59,79 @@ export default function Transactions() {
     }
   }
 
+  // Prev / Next month navigation handlers
+  const handlePrevMonth = () => {
+    if (selectedMonth === 'all') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      setSelectedMonth(ym);
+      setPickerYear(d.getFullYear());
+      return;
+    }
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m - 2, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonth(ym);
+    setPickerYear(d.getFullYear());
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 'all') {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      setSelectedMonth(ym);
+      setPickerYear(d.getFullYear());
+      return;
+    }
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonth(ym);
+    setPickerYear(d.getFullYear());
+  };
+
+  const handleSelectMonth = (monthIndex) => {
+    const ym = `${pickerYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+    setSelectedMonth(ym);
+    setIsMonthPickerOpen(false);
+  };
+
+  const handleSelectAllMonths = () => {
+    setSelectedMonth('all');
+    setIsMonthPickerOpen(false);
+  };
+
+  const handleSelectCurrentMonth = () => {
+    setSelectedMonth(defaultYearMonth);
+    setPickerYear(now.getFullYear());
+    setIsMonthPickerOpen(false);
+  };
+
+  const monthDisplayLabel = useMemo(() => {
+    if (selectedMonth === 'all') return 'All Months';
+    const [y, m] = selectedMonth.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [selectedMonth]);
+
   const filters = [
     { id: 'all', label: 'All' },
     ...categories.map((c) => ({ id: c.id, label: c.name })),
   ];
 
+  // Filtered transactions
   const filtered = useMemo(() => {
     let result = transactions;
+
+    // Filter by selected month
+    if (selectedMonth !== 'all') {
+      result = result.filter((t) => (t.date || '').startsWith(selectedMonth));
+    }
+
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(
@@ -61,11 +140,17 @@ export default function Transactions() {
           (t.notes || '').toLowerCase().includes(s)
       );
     }
+
     if (activeFilter !== 'all') {
       result = result.filter((t) => t.category === activeFilter);
     }
+
     return result;
-  }, [transactions, search, activeFilter]);
+  }, [transactions, selectedMonth, search, activeFilter]);
+
+  const totalSpentInView = useMemo(() => {
+    return filtered.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  }, [filtered]);
 
   const grouped = useMemo(() => groupTransactionsByDate(filtered), [filtered]);
 
@@ -173,17 +258,16 @@ export default function Transactions() {
               </div>
 
               <div>
-                <label className="text-on-surface-variant font-semibold block mb-1">
-                  Amount ({currencyInfo.symbol})
-                </label>
+                <label className="text-on-surface-variant font-semibold block mb-1">Amount</label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0.01"
                   value={editingTransaction.amount}
                   onChange={(e) =>
                     setEditingTransaction({ ...editingTransaction, amount: e.target.value })
                   }
-                  className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary"
+                  className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary font-mono font-bold text-sm"
                   required
                 />
               </div>
@@ -206,14 +290,14 @@ export default function Transactions() {
               </div>
 
               <div>
-                <label className="text-on-surface-variant font-semibold block mb-1">Notes</label>
+                <label className="text-on-surface-variant font-semibold block mb-1">Notes (Optional)</label>
                 <input
                   type="text"
                   value={editingTransaction.notes || ''}
                   onChange={(e) =>
                     setEditingTransaction({ ...editingTransaction, notes: e.target.value })
                   }
-                  placeholder="Memo..."
+                  placeholder="e.g. Receipt #482"
                   className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary"
                 />
               </div>
@@ -235,6 +319,98 @@ export default function Transactions() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Month Picker Modal */}
+      {isMonthPickerOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="app-card max-w-xs w-full p-4 space-y-4 shadow-2xl border-secondary/40 my-auto relative animate-fadeIn">
+            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
+              <h3 className="font-headline text-base font-bold text-on-surface">Select Month</h3>
+              <button
+                type="button"
+                onClick={() => setIsMonthPickerOpen(false)}
+                className="text-outline hover:text-on-surface p-1 rounded-lg"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Year Selector */}
+            <div className="flex items-center justify-between px-2">
+              <button
+                type="button"
+                onClick={() => setPickerYear((y) => y - 1)}
+                className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+                title="Previous Year"
+              >
+                <span className="material-symbols-outlined text-xl">chevron_left</span>
+              </button>
+              <span className="font-headline text-base font-bold text-on-surface">
+                {pickerYear}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPickerYear((y) => y + 1)}
+                className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+                title="Next Year"
+              >
+                <span className="material-symbols-outlined text-xl">chevron_right</span>
+              </button>
+            </div>
+
+            {/* 12 Months Grid */}
+            <div className="grid grid-cols-3 gap-2">
+              {MONTH_NAMES.map((mName, idx) => {
+                const ymString = `${pickerYear}-${String(idx + 1).padStart(2, '0')}`;
+                const isSelected = selectedMonth === ymString;
+                const isCurrentMonth = defaultYearMonth === ymString;
+
+                return (
+                  <button
+                    key={mName}
+                    type="button"
+                    onClick={() => handleSelectMonth(idx)}
+                    className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all flex flex-col items-center justify-center gap-0.5 ${
+                      isSelected
+                        ? 'bg-secondary text-white shadow-xs font-bold'
+                        : isCurrentMonth
+                        ? 'bg-secondary/15 text-secondary border border-secondary/30 font-bold'
+                        : 'bg-surface-container/60 hover:bg-surface-container text-on-surface'
+                    }`}
+                  >
+                    <span>{mName}</span>
+                    {isCurrentMonth && (
+                      <span className="text-[9px] opacity-80 leading-none">Current</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Shortcut Actions */}
+            <div className="pt-2 border-t border-outline-variant/20 flex gap-2">
+              <button
+                type="button"
+                onClick={handleSelectCurrentMonth}
+                className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors"
+              >
+                This Month
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectAllMonths}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  selectedMonth === 'all'
+                    ? 'bg-secondary text-white'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
+              >
+                All Months
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -260,15 +436,53 @@ export default function Transactions() {
         )}
       </div>
 
-      {/* Date & Filter Row */}
-      <div className="flex items-center justify-between gap-2 px-1">
-        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container/70 dark:bg-surface-container-high rounded-full hover:bg-surface-container transition-colors active:scale-95 text-xs font-semibold text-on-surface">
-          <span className="material-symbols-outlined text-base">calendar_month</span>
-          <span>May 2024</span>
-          <span className="material-symbols-outlined text-base">expand_more</span>
-        </button>
-        <div className="text-xs text-outline font-medium">
-          {filtered.length} {filtered.length === 1 ? 'record' : 'records'}
+      {/* Interactive Date & Filter Row */}
+      <div className="flex items-center justify-between gap-2 px-1 flex-wrap">
+        <div className="flex items-center gap-1 bg-surface-container/70 dark:bg-surface-container-high rounded-full p-0.5 border border-outline-variant/20">
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            className="p-1 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-surface-container transition-colors"
+            title="Previous Month"
+          >
+            <span className="material-symbols-outlined text-base">chevron_left</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (selectedMonth !== 'all') {
+                const [y] = selectedMonth.split('-').map(Number);
+                setPickerYear(y);
+              }
+              setIsMonthPickerOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-on-surface hover:text-secondary transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">calendar_month</span>
+            <span>{monthDisplayLabel}</span>
+            <span className="material-symbols-outlined text-sm">expand_more</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            className="p-1 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-surface-container transition-colors"
+            title="Next Month"
+          >
+            <span className="material-symbols-outlined text-base">chevron_right</span>
+          </button>
+        </div>
+
+        <div className="text-right">
+          <span className="text-xs text-outline font-medium block">
+            {filtered.length} {filtered.length === 1 ? 'record' : 'records'}
+          </span>
+          {filtered.length > 0 && (
+            <span className="text-[11px] font-mono text-error font-bold block">
+              - {formatCurrency(totalSpentInView)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -280,10 +494,11 @@ export default function Transactions() {
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${isSelected
-                ? 'bg-secondary text-white shadow-xs'
-                : 'bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container'
-                }`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${
+                isSelected
+                  ? 'bg-secondary text-white shadow-xs'
+                  : 'bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container'
+              }`}
             >
               {f.label}
             </button>
@@ -301,11 +516,25 @@ export default function Transactions() {
             <p className="text-xs text-outline">Loading from Cloud Firestore...</p>
           </div>
         ) : Object.entries(grouped).length === 0 ? (
-          <div className="text-center py-12 app-card">
-            <span className="material-symbols-outlined text-outline text-4xl mb-2 block">
+          <div className="text-center py-12 app-card space-y-2">
+            <span className="material-symbols-outlined text-outline text-4xl block">
               search_off
             </span>
-            <p className="text-sm font-medium text-outline">No transactions found</p>
+            <p className="text-sm font-medium text-on-surface">No transactions found</p>
+            <p className="text-xs text-outline">
+              {selectedMonth === 'all'
+                ? 'No transactions match your current search or category filter.'
+                : `No transactions found for ${monthDisplayLabel}.`}
+            </p>
+            {selectedMonth !== 'all' && (
+              <button
+                type="button"
+                onClick={handleSelectAllMonths}
+                className="mt-2 px-3 py-1.5 bg-surface-container text-secondary text-xs font-semibold rounded-xl hover:bg-surface-container-high transition-colors inline-block"
+              >
+                View All Months
+              </button>
+            )}
           </div>
         ) : (
           Object.entries(grouped).map(([date, items]) => (
@@ -316,6 +545,8 @@ export default function Transactions() {
               <div className="space-y-2">
                 {items.map((t) => {
                   const cat = getCategoryById(t.category, categories);
+                  const txCurrency = t.currency || mainCurrency;
+
                   return (
                     <div
                       key={t.id}
@@ -339,9 +570,15 @@ export default function Transactions() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="text-right">
-                          <p className="text-sm sm:text-base font-mono font-bold text-error">
-                            - {formatCurrency(t.amount)}
-                          </p>
+                          <DualCurrencyDisplay
+                            amount={t.amount}
+                            fromCurrency={txCurrency}
+                            primaryMode="assigned"
+                            align="right"
+                            prefix="- "
+                            mainClassName="text-sm sm:text-base font-mono font-bold text-error"
+                            secondaryClassName="text-[10px] font-mono text-outline"
+                          />
                         </div>
 
                         {/* Action buttons: Edit & Soft Delete */}
