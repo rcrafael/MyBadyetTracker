@@ -46,6 +46,10 @@ export {
 export {
   getCategoriesFromFirestore,
   addCategoryToFirestore,
+  updateCategoryInFirestore,
+  deleteCategoryFromFirestore,
+  checkCategoryUsageInFirestore,
+  isDefaultCategoryId,
 } from './firestore/categoryService';
 
 // 6. System & Retention Policies (Settings page, Data Retention)

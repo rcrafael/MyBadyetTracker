@@ -204,14 +204,14 @@ export default function Transactions() {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* Toast Notification */}
+      {/* Toast Notification (Top-most z-index to stay above modals) */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold 
-            ${toastMessage.isError
-              ? 'bg-error text-white'
-              : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-            }`}
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-[9999] p-3.5 rounded-xl shadow-2xl ring-1 ring-black/10 flex items-center justify-between text-xs font-semibold animate-fadeIn ${
+            toastMessage.isError
+              ? 'bg-error text-white shadow-error/30'
+              : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed shadow-primary/30'
+          }`}
         >
           <span className="truncate pr-2">{toastMessage.text}</span>
           {lastDeletedId && (
