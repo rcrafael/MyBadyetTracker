@@ -1,0 +1,365 @@
+{
+  "total_tips": 60,
+  "tips": [
+    {
+      "id": 1,
+      "category": "Budgeting & Tracking",
+      "title": "Follow the 50/30/20 framework",
+      "tip": "Allocate 50% of your take-home pay to essential needs, 30% to discretionary wants, and 20% to savings or extra debt reduction. This creates an intuitive baseline without needing to track every penny."
+    },
+    {
+      "id": 2,
+      "category": "Budgeting & Tracking",
+      "title": "Implement a zero-based budget",
+      "tip": "Assign every single dollar a job—whether it goes to rent, groceries, or investments—until your remaining balance hits zero. This prevents unassigned cash from quietly leaking into impulse buys."
+    },
+    {
+      "id": 3,
+      "category": "Budgeting & Tracking",
+      "title": "Audit subscriptions quarterly",
+      "tip": "Print your last three bank statements and cancel any streaming service, app, or gym membership you haven't used in the past month. You can always resubscribe later if you genuinely miss it."
+    },
+    {
+      "id": 4,
+      "category": "Budgeting & Tracking",
+      "title": "Try cash-stuffing for problem categories",
+      "tip": "Withdraw physical cash at the start of the week for areas where you tend to overspend, like dining out or entertainment. Once the envelope is empty, spending in that category stops until next week."
+    },
+    {
+      "id": 5,
+      "category": "Budgeting & Tracking",
+      "title": "Track spending daily for 30 days",
+      "tip": "Manually log every transaction in a simple spreadsheet or notes app. The act of writing down each expense creates friction and immediately exposes unconscious spending habits."
+    },
+    {
+      "id": 6,
+      "category": "Food & Groceries",
+      "title": "Shop with a strict list after eating",
+      "tip": "Never enter a grocery store hungry or without a planned list of ingredients. This single habit drastically cuts down on high-margin impulse snacks and duplicate purchases."
+    },
+    {
+      "id": 7,
+      "category": "Food & Groceries",
+      "title": "Build meals around pantry staples and sales",
+      "tip": "Check weekly store circulars before planning dinner, focusing on discounted proteins and versatile basics like beans, rice, and seasonal produce. Base your week’s menu on what is already cheap or in your cupboard."
+    },
+    {
+      "id": 8,
+      "category": "Food & Groceries",
+      "title": "Double batch your cooking",
+      "tip": "Whenever you make soups, curries, or casseroles, cook twice as much and freeze half in single-portion containers. This gives you instant homemade convenience meals and eliminates expensive weeknight takeout."
+    },
+    {
+      "id": 9,
+      "category": "Food & Groceries",
+      "title": "Embrace store brands for basics",
+      "tip": "Generic store brands for pantry staples like oats, flour, canned tomatoes, and spices are often identical in quality to name brands at 20% to 40% lower cost."
+    },
+    {
+      "id": 10,
+      "category": "Food & Groceries",
+      "title": "Institute a weekly 'fridge clean-out' meal",
+      "tip": "Dedicate one night a week to using up leftover produce, open sauces, and odds and ends before buying new groceries. Minimizing food waste directly saves money on your next store run."
+    },
+    {
+      "id": 11,
+      "category": "Everyday Spending & Mindset",
+      "title": "Use the 48-hour rule for non-essentials",
+      "tip": "When you feel the urge to make an unplanned purchase, wait two full days before buying. Most impulse cravings fade once the initial emotional dopamine spike wears off."
+    },
+    {
+      "id": 12,
+      "category": "Everyday Spending & Mindset",
+      "title": "Calculate costs in working hours",
+      "tip": "Divide an item's price by your hourly take-home wage to see how many hours of labor it actually costs. Asking 'Is this jacket worth 4 hours of work?' provides immediate clarity on its true value."
+    },
+    {
+      "id": 13,
+      "category": "Everyday Spending & Mindset",
+      "title": "Unlink saved cards from online shopping sites",
+      "tip": "Remove your credit card details and autofill information from online retailers and delivery apps. The extra step of getting up to grab your physical card creates a pause to reconsider."
+    },
+    {
+      "id": 14,
+      "category": "Everyday Spending & Mindset",
+      "title": "Unsubscribe from promotional emails",
+      "tip": "Marketing newsletters are engineered to create artificial urgency around sales you don't need. Clear your inbox so you only shop when you have a preexisting, identified requirement."
+    },
+    {
+      "id": 15,
+      "category": "Everyday Spending & Mindset",
+      "title": "Swap social hangouts for low-cost alternatives",
+      "tip": "Replace expensive restaurant dinners with potlucks, park walks, game nights, or coffee meetups. You preserve your social life while removing the high bill and service charges."
+    },
+    {
+      "id": 16,
+      "category": "Utilities & Household Expenses",
+      "title": "Adjust your thermostat by 1–2 degrees",
+      "tip": "Setting your thermostat slightly cooler in winter and warmer in summer yields noticeable reductions on monthly utility bills without sacrificing basic comfort."
+    },
+    {
+      "id": 17,
+      "category": "Utilities & Household Expenses",
+      "title": "Install LED bulbs and smart power strips",
+      "tip": "Switch old incandescent bulbs to energy-efficient LEDs, and plug entertainment centers into smart strips to eliminate 'vampire draw' from electronics on standby."
+    },
+    {
+      "id": 18,
+      "category": "Utilities & Household Expenses",
+      "title": "Perform basic home and clothing repairs",
+      "tip": "Learn simple DIY fixes—like sewing a loose button, unclogging a drain, or patching drywall—using free video tutorials. Avoiding professional service calls for minor issues saves hundreds over time."
+    },
+    {
+      "id": 19,
+      "category": "Utilities & Household Expenses",
+      "title": "Run appliances only with full loads",
+      "tip": "Wait until your dishwasher and washing machine are completely full before running them, and wash clothes in cold water whenever possible to cut water-heating costs."
+    },
+    {
+      "id": 20,
+      "category": "Utilities & Household Expenses",
+      "title": "Use your local public library",
+      "tip": "Modern libraries offer free access to physical books, audiobooks, e-books, streaming movies, tools, and museum passes that replace paid digital subscriptions."
+    },
+    {
+      "id": 21,
+      "category": "Bills, Banking & Debt",
+      "title": "Negotiate recurring bills annually",
+      "tip": "Call your internet, insurance, and mobile phone providers once a year to ask for current promotional rates or loyalty discounts. Mentioning competing offers gives you immediate leverage to lower monthly rates."
+    },
+    {
+      "id": 22,
+      "category": "Bills, Banking & Debt",
+      "title": "Automate your savings on payday",
+      "tip": "Set up an automatic transfer to move a set amount to your savings account the day your paycheck lands. Saving first ensures you adapt your living expenses to what remains."
+    },
+    {
+      "id": 23,
+      "category": "Bills, Banking & Debt",
+      "title": "Keep your emergency fund in a High-Yield Savings Account (HYSA)",
+      "tip": "Move your cash reserves out of traditional big banks paying near-zero interest into an FDIC-insured HYSA. This allows your emergency fund to generate passive interest safely."
+    },
+    {
+      "id": 24,
+      "category": "Bills, Banking & Debt",
+      "title": "Use the debt avalanche or debt snowball method",
+      "tip": "Target high-interest debt aggressively—either attacking the highest interest rate first to minimize cost (avalanche) or the smallest balance first for quick wins (snowball). Consistent focus accelerates payoff time."
+    },
+    {
+      "id": 25,
+      "category": "Bills, Banking & Debt",
+      "title": "Review auto and home insurance policies regularly",
+      "tip": "Re-shop your insurance coverage every 12 to 18 months and ask about multi-policy bundling discounts or higher deductibles to lower your annual premiums."
+    },
+    {
+      "id": 26,
+      "category": "Shopping & Lifestyle",
+      "title": "Buy quality second-hand for durable goods",
+      "tip": "Check local marketplaces and thrift stores for furniture, tools, gym equipment, and children's items. Many durable goods lose 50% of their retail value immediately while retaining full functionality."
+    },
+    {
+      "id": 27,
+      "category": "Shopping & Lifestyle",
+      "title": "Maintain and clean what you already own",
+      "tip": "Regular maintenance—such as changing car oil on schedule, conditioning leather, and descaling appliances—extends their lifespan and delays costly replacements."
+    },
+    {
+      "id": 28,
+      "category": "Shopping & Lifestyle",
+      "title": "Check return policies and actually use them",
+      "tip": "If a recent purchase fails to meet expectations, doesn't fit, or isn't being used, return it within the refund window instead of letting it sit in a closet."
+    },
+    {
+      "id": 29,
+      "category": "Shopping & Lifestyle",
+      "title": "Opt for generic over-the-counter medications",
+      "tip": "Look at the active ingredients on pain relievers, allergy pills, and cold medicines to confirm they match brand-name equivalents. Generic medications meet the same regulatory standards at a fraction of the price."
+    },
+    {
+      "id": 30,
+      "category": "Shopping & Lifestyle",
+      "title": "Plan major purchases around annual discount cycles",
+      "tip": "Time large electronics, mattress, appliance, or seasonal clothing buys around major clearance periods like end-of-season sales or holiday promotions rather than buying at peak retail prices."
+    },
+    {
+      "id": 31,
+      "category": "Transportation & Travel",
+      "title": "Maintain proper tire pressure to maximize fuel economy",
+      "tip": "Under-inflated tires increase rolling resistance, which noticeably lowers your vehicle's gas mileage. Check your tire pressure monthly to keep fuel consumption efficient and extend tire life."
+    },
+    {
+      "id": 32,
+      "category": "Transportation & Travel",
+      "title": "Combine errands into a single trip",
+      "tip": "Plan your weekly shopping, banking, and appointments along a single continuous route rather than making multiple spontaneous outings. Trip-chaining reduces fuel costs and unnecessary vehicle wear and tear."
+    },
+    {
+      "id": 33,
+      "category": "Transportation & Travel",
+      "title": "Use public transit, walking, or cycling for short commutes",
+      "tip": "Swapping out car trips under two miles saves on fuel, eliminates parking fees, and lowers long-term maintenance costs."
+    },
+    {
+      "id": 34,
+      "category": "Transportation & Travel",
+      "title": "Book travel using price alerts and incognito mode",
+      "tip": "Set automated fare notifications on travel aggregators weeks in advance to catch price drops, and book on flexible dates to secure the cheapest flights."
+    },
+    {
+      "id": 35,
+      "category": "Transportation & Travel",
+      "title": "Pack your own snacks and empty water bottle for transit",
+      "tip": "Airport kiosks, rest stops, and train stations mark up food and drinks dramatically. Bringing snacks and filling a reusable bottle past security saves substantial cash on every trip."
+    },
+    {
+      "id": 36,
+      "category": "Financial Planning & Wealth Building",
+      "title": "Capture the full employer 401(k) or pension match",
+      "tip": "If your employer offers a retirement contribution match, contribute at least enough to receive the full amount. Turning down a match is effectively leaving free compensation on the table."
+    },
+    {
+      "id": 37,
+      "category": "Financial Planning & Wealth Building",
+      "title": "Treat income raises as invisible",
+      "tip": "Whenever you receive a pay raise or bonus, route at least 50% of the increase directly into savings or investment accounts. This prevents lifestyle inflation from consuming your growing income."
+    },
+    {
+      "id": 38,
+      "category": "Financial Planning & Wealth Building",
+      "title": "Round up purchases to the nearest dollar",
+      "tip": "Use banking tools or apps that round up spare change from everyday debit transactions directly into a separate savings or investment pot. Small, unnoticeable amounts accumulate into a meaningful cushion over the year."
+    },
+    {
+      "id": 39,
+      "category": "Financial Planning & Wealth Building",
+      "title": "Check your credit reports for errors annually",
+      "tip": "Request your free annual credit reports to ensure there are no incorrect derogatory marks or fraudulent accounts. A cleaner credit score directly lowers the interest rates on future mortgages and loans."
+    },
+    {
+      "id": 40,
+      "category": "Financial Planning & Wealth Building",
+      "title": "Establish sinking funds for irregular large expenses",
+      "tip": "Set aside small, dedicated monthly amounts for predictable annual costs like car registration, holiday gifts, or vet bills. This keeps routine annual expenses from blowing up your monthly budget."
+    },
+    {
+      "id": 41,
+      "category": "Smart Shopping & Consumption",
+      "title": "Calculate the cost-per-wear before buying clothes",
+      "tip": "Divide an item's price tag by the estimated number of times you will realistically wear it. A durable $100 coat worn 200 times is far cheaper per use than a trendy $30 top worn twice."
+    },
+    {
+      "id": 42,
+      "category": "Smart Shopping & Consumption",
+      "title": "Use browser extension coupon finders and cashback portals",
+      "tip": "Install reputable shopping extensions that automatically test coupon codes and activate cashback rewards at checkout. This ensures you never miss passive discounts on items you were already planning to buy."
+    },
+    {
+      "id": 43,
+      "category": "Smart Shopping & Consumption",
+      "title": "Rent or borrow specialty tools instead of buying",
+      "tip": "For one-off DIY home improvement or gardening projects, borrow equipment from neighbors or rent from hardware stores. Avoid spending hundreds on tools you will only use for an afternoon."
+    },
+    {
+      "id": 44,
+      "category": "Smart Shopping & Consumption",
+      "title": "Buy seasonal items on post-holiday clearance",
+      "tip": "Purchase holiday decorations, wrapping paper, winter gear, or summer patio items the week after the season ends when retailers slash prices by up to 75%. Store them safely for the following year."
+    },
+    {
+      "id": 45,
+      "category": "Smart Shopping & Consumption",
+      "title": "Avoid the 'free shipping' upselling trap",
+      "tip": "Never add extra items you don't need to an online cart just to hit the threshold for free shipping. Paying a $5 shipping fee is cheaper than spending an extra $25 on filler products."
+    },
+    {
+      "id": 46,
+      "category": "Home & Lifestyle Optimization",
+      "title": "Make your own non-toxic household cleaners",
+      "tip": "A simple spray bottle filled with diluted white vinegar, water, and a few drops of dish soap can clean most household surfaces. This replaces dozens of specialized, overpriced chemical cleaning sprays."
+    },
+    {
+      "id": 47,
+      "category": "Home & Lifestyle Optimization",
+      "title": "Air-dry laundry when possible",
+      "tip": "Clothes dryers consume massive amounts of electricity and accelerate fabric wear. Hanging clothes on a drying rack slashes power bills and helps garments last significantly longer."
+    },
+    {
+      "id": 48,
+      "category": "Home & Lifestyle Optimization",
+      "title": "Host clothing and item swaps with friends",
+      "tip": "Gather a group to trade gently used clothes, books, and home décor that individuals no longer want. Everyone leaves with fresh items without spending any money."
+    },
+    {
+      "id": 49,
+      "category": "Home & Lifestyle Optimization",
+      "title": "Learn basic plant propagation",
+      "tip": "Instead of buying new houseplants or garden herbs, take cuttings from existing plants or neighbors' gardens and root them in water. It is a cost-free way to expand your greenery."
+    },
+    {
+      "id": 50,
+      "category": "Home & Lifestyle Optimization",
+      "title": "Audit your utility plan options",
+      "tip": "In deregulated energy markets, compare alternative electric and gas suppliers to find cheaper per-kilowatt-hour rates. Switching suppliers takes minutes and can reduce monthly base rates."
+    },
+    {
+      "id": 51,
+      "category": "Health, Wellness & Personal Care",
+      "title": "Extend time between professional salon visits",
+      "tip": "Stretching hair trims, coloring, or styling appointments by two to three weeks reduces your annual visits by several sessions, compounding into large yearly savings."
+    },
+    {
+      "id": 52,
+      "category": "Health, Wellness & Personal Care",
+      "title": "Exercise outdoors or use bodyweight home routines",
+      "tip": "Cancel underused gym memberships and switch to running, calisthenics, or free workout videos on YouTube. High-quality fitness does not require expensive monthly facilities."
+    },
+    {
+      "id": 53,
+      "category": "Health, Wellness & Personal Care",
+      "title": "Brew specialty coffee at home",
+      "tip": "Invest in a simple French press, pour-over cone, or moka pot and quality beans. Making your daily iced latte or morning roast at home can save $1,000 or more annually compared to café prices."
+    },
+    {
+      "id": 54,
+      "category": "Health, Wellness & Personal Care",
+      "title": "Drink more water instead of paid beverages",
+      "tip": "Replace sodas, juices, and alcohol when dining out with tap water. Cutting paid drinks cuts restaurant tabs and grocery bills instantly while improving overall health."
+    },
+    {
+      "id": 55,
+      "category": "Health, Wellness & Personal Care",
+      "title": "Use preventive dental and health checkups",
+      "tip": "Take full advantage of covered routine dental cleanings and annual physicals provided by your insurance. Catching health issues early prevents severe and expensive medical procedures down the line."
+    },
+    {
+      "id": 56,
+      "category": "Digital Habits & Subscriptions",
+      "title": "Downgrade unused cloud storage and phone plans",
+      "tip": "Check your actual data usage on mobile and cloud plans to see if you are paying for unlimited tiers you never reach. Switching to lower data limits or low-cost MVNO carriers lowers fixed monthly bills."
+    },
+    {
+      "id": 57,
+      "category": "Digital Habits & Subscriptions",
+      "title": "Rotate streaming services month-to-month",
+      "tip": "Keep only one active video streaming subscription at a time, watch the specific shows you want, and cancel it before switching to another service next month."
+    },
+    {
+      "id": 58,
+      "category": "Digital Habits & Subscriptions",
+      "title": "Clear your browser cookies before booking travel",
+      "tip": "Travel sites sometimes track repeated route searches and adjust prices dynamically. Use private browsing or clear cache and cookies to ensure you see baseline fares."
+    },
+    {
+      "id": 59,
+      "category": "Digital Habits & Subscriptions",
+      "title": "Use free open-source software alternatives",
+      "tip": "Replace paid software packages with reliable open-source tools like LibreOffice for office work, GIMP for image editing, or DaVinci Resolve for video editing."
+    },
+    {
+      "id": 60,
+      "category": "Digital Habits & Subscriptions",
+      "title": "Embrace a 30-day 'No-Spend' challenge on discretionary items",
+      "tip": "Pick one month to pause all non-essential spending, buying only basic groceries and paying fixed bills. It resets your consumption baseline and proves how little discretionary spending you actually need."
+    }
+  ]
+}

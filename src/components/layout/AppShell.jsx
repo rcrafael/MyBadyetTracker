@@ -3,6 +3,7 @@ import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 import InstallSuggestionBanner from '../pwa/InstallSuggestionBanner';
 import InstallPromptModal from '../pwa/InstallPromptModal';
+import DailyTipModal from '../common/DailyTipModal';
 
 export default function AppShell() {
   return (
@@ -15,6 +16,7 @@ export default function AppShell() {
       </main>
       <InstallSuggestionBanner />
       <InstallPromptModal />
+      <DailyTipModal />
       <BottomNav />
     </div>
   );
