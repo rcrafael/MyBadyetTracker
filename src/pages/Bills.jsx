@@ -12,10 +12,13 @@ import { useCurrency } from '../context/CurrencyContext';
 import InstallmentDetailModal from '../components/bills/InstallmentDetailModal';
 import InstallmentManagerModal from '../components/bills/InstallmentManagerModal';
 import EditInstallmentModal from '../components/bills/EditInstallmentModal';
+import DualCurrencyDisplay from '../components/common/DualCurrencyDisplay';
 
 function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
-  const { formatCurrency } = useCurrency();
+  const { mainCurrency, secondaryCurrencyInfo } = useCurrency();
   const isInstallment = Boolean(bill.isInstallment);
+  const billCurrency = bill.currency || mainCurrency;
+  const isSecondaryCurrency = billCurrency !== mainCurrency;
 
   const statusConfig = {
     overdue: {
@@ -82,6 +85,12 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
                 Monthly
               </span>
             ) : null}
+
+            {isSecondaryCurrency && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-surface-container-high text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">
+                {billCurrency} Bill
+              </span>
+            )}
           </div>
 
           <p className={`text-xs font-semibold ${config.statusColor} truncate mt-0.5`}>
@@ -107,10 +116,17 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
       </div>
 
       <div className="text-right shrink-0 flex flex-col items-end gap-1.5 pl-2">
-        <div className="text-sm sm:text-base font-mono font-bold text-on-surface">
-          {formatCurrency(bill.amount)}
-          {isInstallment && <span className="text-[10px] text-outline block font-normal font-sans">/ month</span>}
-        </div>
+        {/* Dual Currency Amount (Assigned Currency Bigger, Unassigned / Converted Smaller Below) */}
+        <DualCurrencyDisplay
+          amount={bill.amount}
+          fromCurrency={billCurrency}
+          primaryMode="assigned"
+          align="right"
+          mainClassName="text-sm sm:text-base font-bold font-mono text-on-surface"
+          secondaryClassName="text-[11px] font-mono font-medium text-on-surface-variant"
+          suffix={isInstallment ? '/ mo' : ''}
+        />
+
         <div className="flex items-center gap-1">
           {isInstallment && (
             <button
@@ -143,7 +159,16 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
 }
 
 export default function Bills() {
-  const { currencyInfo, formatCurrency } = useCurrency();
+  const {
+    isDualCurrencyEnabled,
+    mainCurrency,
+    secondaryCurrency,
+    mainCurrencyInfo,
+    secondaryCurrencyInfo,
+    convertToMain,
+    formatCurrency,
+  } = useCurrency();
+
   const [billsList, setBillsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -157,6 +182,7 @@ export default function Bills() {
   const [billType, setBillType] = useState('standard');
 
   // Form state
+  const [newBillCurrency, setNewBillCurrency] = useState(mainCurrency);
   const [newBillName, setNewBillName] = useState('');
   const [newBillBank, setNewBillBank] = useState('');
   const [newBillAmount, setNewBillAmount] = useState('');
@@ -172,6 +198,10 @@ export default function Bills() {
   useEffect(() => {
     loadBills();
   }, []);
+
+  useEffect(() => {
+    setNewBillCurrency(mainCurrency);
+  }, [mainCurrency]);
 
   async function loadBills() {
     setLoading(true);
@@ -275,6 +305,7 @@ export default function Bills() {
         const created = await addBillToFirestore({
           name: newBillName.trim(),
           amount: monthlyAmt,
+          currency: newBillCurrency,
           monthlyAmount: monthlyAmt,
           totalAmount: totalAmt,
           dueDate: newBillDueDate,
@@ -291,18 +322,19 @@ export default function Bills() {
           status: new Date(newBillDueDate) < new Date() ? 'overdue' : 'upcoming',
         });
         setBillsList((prev) => [created, ...prev]);
-        showToast(`Installment plan "${created.name}" created (${months} months)!`);
+        showToast(`Installment plan "${created.name}" created (${months} months in ${newBillCurrency})!`);
       } else {
         const created = await addBillToFirestore({
           name: newBillName.trim(),
           amount: parseFloat(newBillAmount),
+          currency: newBillCurrency,
           dueDate: newBillDueDate,
           recurring: newBillRecurring,
           note: newBillNote.trim(),
           status: new Date(newBillDueDate) < new Date() ? 'overdue' : 'upcoming',
         });
         setBillsList((prev) => [created, ...prev]);
-        showToast('New bill added!');
+        showToast(`New bill added in ${newBillCurrency}!`);
       }
 
       setIsAddModalOpen(false);
@@ -313,6 +345,7 @@ export default function Bills() {
       setNewBillMonths('12');
       setNewBillRecurring(true);
       setBillType('standard');
+      setNewBillCurrency(mainCurrency);
     } catch (err) {
       showToast('Failed to create bill.', true);
     }
@@ -323,14 +356,22 @@ export default function Bills() {
     setTimeout(() => setToastMessage(null), 4000);
   }
 
-  const totalDue = billsList
+  // Calculate totals in Main Currency
+  const totalDueInMain = billsList
     .filter((b) => b.status !== 'paid')
-    .reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
-  const totalPaid = billsList
+    .reduce((s, b) => s + convertToMain(b.amount, b.currency), 0);
+
+  const totalPaidInMain = billsList
     .filter((b) => b.status === 'paid')
-    .reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
-  const totalAll = totalDue + totalPaid;
-  const paidPercent = totalAll > 0 ? Math.round((totalPaid / totalAll) * 100) : 0;
+    .reduce((s, b) => s + convertToMain(b.amount, b.currency), 0);
+
+  const totalAllInMain = totalDueInMain + totalPaidInMain;
+  const paidPercent = totalAllInMain > 0 ? Math.round((totalPaidInMain / totalAllInMain) * 100) : 0;
+
+  const currentActiveCurrencySymbol =
+    newBillCurrency === secondaryCurrency
+      ? secondaryCurrencyInfo.symbol
+      : mainCurrencyInfo.symbol;
 
   return (
     <div className="space-y-4 pb-6">
@@ -384,12 +425,12 @@ export default function Bills() {
 
       {/* Add Bill Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleCreateBill}
-            className="app-card max-w-md w-full space-y-4 shadow-xl border-secondary/40 max-h-[90vh] flex flex-col"
+            className="app-card max-w-md w-full p-4 sm:p-6 space-y-3.5 shadow-2xl border-secondary/40 max-h-[85vh] sm:max-h-[88vh] flex flex-col my-auto relative"
           >
-            <div className="flex justify-between items-center shrink-0">
+            <div className="flex justify-between items-center shrink-0 pb-2 border-b border-outline-variant/20">
               <h3 className="font-headline text-base font-bold text-on-surface">
                 {billType === 'installment' ? 'Create Installment Plan' : 'Add New Bill'}
               </h3>
@@ -430,6 +471,46 @@ export default function Bills() {
               </button>
             </div>
 
+            {/* Currency Selector (Main vs Secondary) - Only when Dual Currency is Enabled */}
+            {isDualCurrencyEnabled && (
+              <div className="space-y-1.5 shrink-0">
+                <label className="text-on-surface-variant font-semibold text-xs block">
+                  Select Currency
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBillCurrency(mainCurrency)}
+                    className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                      newBillCurrency === mainCurrency
+                        ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                        : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                    }`}
+                  >
+                    <span>{mainCurrencyInfo.flag}</span>
+                    <span>
+                      Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setNewBillCurrency(secondaryCurrency)}
+                    className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                      newBillCurrency === secondaryCurrency
+                        ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                        : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                    }`}
+                  >
+                    <span>{secondaryCurrencyInfo.flag}</span>
+                    <span>
+                      Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scrollbar">
               <div>
                 <label className="text-on-surface-variant font-semibold block mb-1">
@@ -467,7 +548,7 @@ export default function Bills() {
 
               <div>
                 <label className="text-on-surface-variant font-semibold block mb-1">
-                  {billType === 'installment' ? 'Monthly Payment Amount' : 'Amount'} ({currencyInfo.symbol})
+                  {billType === 'installment' ? 'Monthly Payment Amount' : 'Amount'} ({currentActiveCurrencySymbol})
                 </label>
                 <input
                   type="number"
@@ -543,9 +624,14 @@ export default function Bills() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-on-surface-variant font-medium">Total Plan Value:</span>
-                    <span className="font-mono font-bold text-on-surface">
-                      {formatCurrency(computedTotalAmountPreview)}
-                    </span>
+                    <DualCurrencyDisplay
+                      amount={computedTotalAmountPreview}
+                      fromCurrency={newBillCurrency}
+                      primaryMode="assigned"
+                      align="right"
+                      mainClassName="font-mono font-bold text-on-surface text-xs sm:text-sm"
+                      secondaryClassName="text-[10px] font-mono text-outline"
+                    />
                   </div>
                   <p className="text-[11px] text-outline pt-1 border-t border-outline-variant/20">
                     Auto-schedules monthly payments. Automatically graduates and leaves billing upon paying the {newBillMonths}th installment.
@@ -590,17 +676,17 @@ export default function Bills() {
               )}
             </div>
 
-            <div className="flex gap-2 pt-2 shrink-0">
+            <div className="flex gap-2 pt-3 shrink-0 border-t border-outline-variant/20">
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high"
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs"
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs active:scale-98 transition-all"
               >
                 {billType === 'installment' ? 'Create Installment Plan' : 'Create Bill'}
               </button>
@@ -609,14 +695,19 @@ export default function Bills() {
         </div>
       )}
 
-      {/* Summary Section */}
+      {/* Summary Section: Total due this month (Main Currency BIGGER, Secondary Converted SMALLER) */}
       <section className="app-card space-y-3">
         <div className="flex justify-between items-end gap-2 flex-wrap">
           <div>
             <p className="text-xs text-on-surface-variant mb-0.5">Total due this month</p>
-            <h2 className="font-headline text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
-              {formatCurrency(totalDue)}
-            </h2>
+            <DualCurrencyDisplay
+              amount={totalDueInMain}
+              fromCurrency={mainCurrency}
+              primaryMode="main"
+              align="left"
+              mainClassName="font-headline text-2xl sm:text-3xl font-bold text-on-surface tracking-tight"
+              secondaryClassName="text-xs sm:text-sm font-mono font-medium text-on-surface-variant mt-0.5"
+            />
           </div>
           <div className="flex items-center gap-2">
             <button

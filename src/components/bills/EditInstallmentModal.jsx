@@ -1,13 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { computeInstallmentEndDate } from '../../services/firestoreService';
+import DualCurrencyDisplay from '../common/DualCurrencyDisplay';
 
 export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) {
-  const { currencyInfo, formatCurrency } = useCurrency();
+  const {
+    isDualCurrencyEnabled,
+    mainCurrency,
+    secondaryCurrency,
+    mainCurrencyInfo,
+    secondaryCurrencyInfo,
+  } = useCurrency();
 
   const [name, setName] = useState('');
   const [bankOrMerchant, setBankOrMerchant] = useState('');
   const [monthlyAmount, setMonthlyAmount] = useState('');
+  const [planCurrency, setPlanCurrency] = useState(mainCurrency);
   const [dueDate, setDueDate] = useState('');
   const [totalMonths, setTotalMonths] = useState('12');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,10 +25,11 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
       setName(plan.name || '');
       setBankOrMerchant(plan.bankOrMerchant || '');
       setMonthlyAmount(plan.monthlyAmount || plan.amount || '');
+      setPlanCurrency(plan.currency || mainCurrency);
       setDueDate(plan.dueDate || plan.startDate || new Date().toISOString().split('T')[0]);
       setTotalMonths(String(plan.totalMonths || 12));
     }
-  }, [plan, isOpen]);
+  }, [plan, isOpen, mainCurrency]);
 
   const computedEndDate = useMemo(() => {
     if (!dueDate || !totalMonths) return '';
@@ -49,6 +58,7 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
         name: name.trim(),
         bankOrMerchant: bankOrMerchant.trim(),
         amount: monthlyAmt,
+        currency: planCurrency,
         monthlyAmount: monthlyAmt,
         totalAmount: totalAmt,
         dueDate: dueDate,
@@ -65,11 +75,16 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
     }
   };
 
+  const currentSymbol =
+    planCurrency === secondaryCurrency
+      ? secondaryCurrencyInfo.symbol
+      : mainCurrencyInfo.symbol;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <form
         onSubmit={handleSubmit}
-        className="app-card max-w-md w-full p-5 sm:p-6 shadow-2xl border border-secondary/40 max-h-[90vh] flex flex-col relative space-y-4"
+        className="app-card max-w-md w-full p-4 sm:p-6 shadow-2xl border border-secondary/40 max-h-[85vh] sm:max-h-[88vh] flex flex-col relative space-y-3.5 my-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-installment-title"
@@ -91,6 +106,46 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
+
+        {/* Currency Selection - Only when Dual Currency is Enabled */}
+        {isDualCurrencyEnabled && (
+          <div className="space-y-1.5 shrink-0">
+            <label className="text-on-surface-variant font-semibold text-xs block">
+              Plan Currency
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPlanCurrency(mainCurrency)}
+                className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                  planCurrency === mainCurrency
+                    ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                    : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                <span>{mainCurrencyInfo.flag}</span>
+                <span>
+                  Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPlanCurrency(secondaryCurrency)}
+                className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                  planCurrency === secondaryCurrency
+                    ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                    : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                <span>{secondaryCurrencyInfo.flag}</span>
+                <span>
+                  Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Inputs */}
         <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scrollbar">
@@ -124,7 +179,7 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
 
           <div>
             <label className="text-on-surface-variant font-semibold block mb-1">
-              Monthly Payment Amount ({currencyInfo.symbol})
+              Monthly Payment Amount ({currentSymbol})
             </label>
             <input
               type="number"
@@ -196,9 +251,14 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-on-surface-variant font-medium">Total Contract Value:</span>
-                <span className="font-mono font-bold text-on-surface">
-                  {formatCurrency(computedTotalAmount)}
-                </span>
+                <DualCurrencyDisplay
+                  amount={computedTotalAmount}
+                  fromCurrency={planCurrency}
+                  primaryMode="assigned"
+                  align="right"
+                  mainClassName="font-mono font-bold text-on-surface text-xs sm:text-sm"
+                  secondaryClassName="text-[10px] font-mono text-outline"
+                />
               </div>
             </div>
           )}

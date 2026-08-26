@@ -142,10 +142,10 @@ export default function Transactions() {
 
       {/* Edit Modal */}
       {editingTransaction && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleUpdate}
-            className="app-card max-w-sm w-full space-y-4 shadow-xl border-secondary/40"
+            className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative"
           >
             <div className="flex justify-between items-center">
               <h3 className="font-headline text-base font-bold text-on-surface">Edit Transaction</h3>

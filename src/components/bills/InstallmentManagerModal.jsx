@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
+import DualCurrencyDisplay from '../common/DualCurrencyDisplay';
 
 export default function InstallmentManagerModal({
   isOpen,
@@ -12,13 +13,20 @@ export default function InstallmentManagerModal({
   onAddNewPlan,
   onViewPlan,
 }) {
-  const { formatCurrency } = useCurrency();
+  const {
+    mainCurrency,
+    secondaryCurrency,
+    convertToMain,
+    formatCurrency,
+  } = useCurrency();
+
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'active' | 'completed'
   const [confirmPayInFullPlan, setConfirmPayInFullPlan] = useState(null);
 
   // Parse and calculate plan metrics
   const processedPlans = useMemo(() => {
     return plans.map((p) => {
+      const planCurrency = p.currency || mainCurrency;
       const totalMonths = parseInt(p.totalMonths, 10) || 1;
       const currentInstallment = parseInt(p.currentInstallment, 10) || 1;
       const paidInstallments =
@@ -36,8 +44,15 @@ export default function InstallmentManagerModal({
       const percentPaid = Math.min(100, Math.round((paidInstallments / totalMonths) * 100));
       const isCompleted = paidInstallments >= totalMonths || (p.status === 'paid' && currentInstallment >= totalMonths);
 
+      // Converted metrics to Main Currency for accurate global aggregation
+      const monthlyAmountInMain = convertToMain(monthlyAmount, planCurrency);
+      const totalAmountInMain = convertToMain(totalAmount, planCurrency);
+      const paidBalanceInMain = convertToMain(paidBalance, planCurrency);
+      const remainingBalanceInMain = convertToMain(remainingBalance, planCurrency);
+
       return {
         ...p,
+        currency: planCurrency,
         totalMonths,
         currentInstallment,
         paidInstallments,
@@ -48,17 +63,30 @@ export default function InstallmentManagerModal({
         remainingBalance,
         percentPaid,
         isCompleted,
+        monthlyAmountInMain,
+        totalAmountInMain,
+        paidBalanceInMain,
+        remainingBalanceInMain,
       };
     });
-  }, [plans]);
+  }, [plans, mainCurrency, convertToMain]);
 
-  // Summary Metrics
+  // Summary Metrics aggregated in Main Currency
   const activePlansList = processedPlans.filter((p) => !p.isCompleted);
   const completedPlansList = processedPlans.filter((p) => p.isCompleted);
 
-  const totalMonthlyCommitment = activePlansList.reduce((sum, p) => sum + p.monthlyAmount, 0);
-  const totalOutstandingBalance = activePlansList.reduce((sum, p) => sum + p.remainingBalance, 0);
-  const totalPaidToDate = processedPlans.reduce((sum, p) => sum + p.paidBalance, 0);
+  const totalMonthlyCommitmentInMain = activePlansList.reduce(
+    (sum, p) => sum + p.monthlyAmountInMain,
+    0
+  );
+  const totalOutstandingBalanceInMain = activePlansList.reduce(
+    (sum, p) => sum + p.remainingBalanceInMain,
+    0
+  );
+  const totalPaidToDateInMain = processedPlans.reduce(
+    (sum, p) => sum + p.paidBalanceInMain,
+    0
+  );
 
   // Filtered plans
   const filteredPlans = useMemo(() => {
@@ -70,9 +98,9 @@ export default function InstallmentManagerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <div
-        className="app-card max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-secondary/40 max-h-[92vh] flex flex-col relative space-y-4"
+        className="app-card max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-secondary/40 max-h-[85vh] sm:max-h-[88vh] flex flex-col relative space-y-3.5 my-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="installment-manager-title"
@@ -104,7 +132,7 @@ export default function InstallmentManagerModal({
           </button>
         </div>
 
-        {/* Global Summary Cards */}
+        {/* Global Summary Cards in Dual Currency (Main BIGGER, Secondary SMALLER) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
           <div className="p-3 rounded-xl bg-surface-container/50 border border-outline-variant/20 space-y-0.5">
             <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
@@ -122,9 +150,14 @@ export default function InstallmentManagerModal({
             <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
               Monthly Commitment
             </span>
-            <p className="font-mono text-base sm:text-lg font-bold text-secondary truncate">
-              {formatCurrency(totalMonthlyCommitment)}
-            </p>
+            <DualCurrencyDisplay
+              amount={totalMonthlyCommitmentInMain}
+              fromCurrency={mainCurrency}
+              primaryMode="main"
+              align="left"
+              mainClassName="text-sm sm:text-base font-mono font-bold text-secondary truncate"
+              secondaryClassName="text-[10px] font-mono text-outline truncate"
+            />
             <span className="text-[10px] text-outline block">Total / month</span>
           </div>
 
@@ -132,9 +165,14 @@ export default function InstallmentManagerModal({
             <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
               Total Outstanding
             </span>
-            <p className="font-mono text-base sm:text-lg font-bold text-error truncate">
-              {formatCurrency(totalOutstandingBalance)}
-            </p>
+            <DualCurrencyDisplay
+              amount={totalOutstandingBalanceInMain}
+              fromCurrency={mainCurrency}
+              primaryMode="main"
+              align="left"
+              mainClassName="text-sm sm:text-base font-mono font-bold text-error truncate"
+              secondaryClassName="text-[10px] font-mono text-outline truncate"
+            />
             <span className="text-[10px] text-outline block">Remaining balance</span>
           </div>
 
@@ -142,9 +180,14 @@ export default function InstallmentManagerModal({
             <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
               Settled to Date
             </span>
-            <p className="font-mono text-base sm:text-lg font-bold text-success truncate">
-              {formatCurrency(totalPaidToDate)}
-            </p>
+            <DualCurrencyDisplay
+              amount={totalPaidToDateInMain}
+              fromCurrency={mainCurrency}
+              primaryMode="main"
+              align="left"
+              mainClassName="text-sm sm:text-base font-mono font-bold text-success truncate"
+              secondaryClassName="text-[10px] font-mono text-outline truncate"
+            />
             <span className="text-[10px] text-outline block">Total payments made</span>
           </div>
         </div>
@@ -213,13 +256,18 @@ export default function InstallmentManagerModal({
                 <h4 className="text-xs sm:text-sm font-bold text-on-surface">
                   Settle "{confirmPayInFullPlan.name}" in Full Early?
                 </h4>
-                <p className="text-xs text-on-surface-variant mt-0.5">
+                <div className="text-xs text-on-surface-variant mt-0.5">
                   This will settle all remaining {confirmPayInFullPlan.remainingMonths} months (total of{' '}
-                  <strong className="text-on-surface font-mono">
-                    {formatCurrency(confirmPayInFullPlan.remainingBalance)}
-                  </strong>
+                  <DualCurrencyDisplay
+                    amount={confirmPayInFullPlan.remainingBalance}
+                    fromCurrency={confirmPayInFullPlan.currency}
+                    primaryMode="assigned"
+                    align="left"
+                    mainClassName="font-mono font-bold text-on-surface inline"
+                    secondaryClassName="text-[10px] font-mono text-outline inline ml-1"
+                  />
                   ) and mark this plan as completed.
-                </p>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 justify-end">
@@ -280,6 +328,11 @@ export default function InstallmentManagerModal({
                           {plan.bankOrMerchant}
                         </span>
                       )}
+                      {plan.currency && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant shrink-0">
+                          {plan.currency}
+                        </span>
+                      )}
                       {plan.isCompleted ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-success/15 text-success flex items-center gap-0.5 shrink-0">
                           <span className="material-symbols-outlined text-xs">check_circle</span>
@@ -306,14 +359,31 @@ export default function InstallmentManagerModal({
                     </p>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="font-mono text-base font-bold text-on-surface block">
-                      {formatCurrency(plan.monthlyAmount)}
-                      <span className="text-[11px] font-normal text-outline"> / mo</span>
-                    </span>
-                    <span className="text-[11px] text-on-surface-variant block">
-                      Balance: <strong className={plan.isCompleted ? 'text-success' : 'text-error'}>{formatCurrency(plan.remainingBalance)}</strong>
-                    </span>
+                  {/* Monthly amount and Balance displayed in form of the assigned currency with converted value below */}
+                  <div className="text-right shrink-0 space-y-1">
+                    <DualCurrencyDisplay
+                      amount={plan.monthlyAmount}
+                      fromCurrency={plan.currency}
+                      primaryMode="assigned"
+                      align="right"
+                      mainClassName="font-mono text-sm sm:text-base font-bold text-on-surface"
+                      secondaryClassName="text-[10px] font-mono text-outline"
+                      suffix="/ mo"
+                    />
+
+                    <div className="flex flex-col items-end text-[11px] text-on-surface-variant leading-tight">
+                      <span className="text-[10px] text-outline">Balance:</span>
+                      <DualCurrencyDisplay
+                        amount={plan.remainingBalance}
+                        fromCurrency={plan.currency}
+                        primaryMode="assigned"
+                        align="right"
+                        mainClassName={`font-mono font-bold text-xs ${
+                          plan.isCompleted ? 'text-success' : 'text-error'
+                        }`}
+                        secondaryClassName="text-[10px] font-mono text-outline"
+                      />
+                    </div>
                   </div>
                 </div>
 

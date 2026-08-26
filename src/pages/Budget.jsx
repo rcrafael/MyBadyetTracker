@@ -208,10 +208,10 @@ export default function Budget() {
 
       {/* Edit Budget Limit Modal */}
       {editingBudget && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleSaveBudget}
-            className="app-card max-w-sm w-full space-y-4 shadow-xl border-secondary/40"
+            className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative"
           >
             <div className="flex justify-between items-center">
               <h3 className="font-headline text-base font-bold text-on-surface capitalize">
@@ -266,10 +266,10 @@ export default function Budget() {
 
       {/* Add New Budget Modal */}
       {isAddBudgetOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleCreateBudget}
-            className="app-card max-w-sm w-full space-y-4 shadow-xl border-secondary/40"
+            className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative"
           >
             <div className="flex justify-between items-center">
               <h3 className="font-headline text-base font-bold text-on-surface">
