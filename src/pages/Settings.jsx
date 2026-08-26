@@ -694,7 +694,12 @@ export default function Settings() {
             label="Dark Mode"
             trailing={<Toggle enabled={isDark} onChange={toggleTheme} />}
           />
-          <SettingsItem icon="security" label="Privacy & Security" />
+          <SettingsItem
+            icon="security"
+            label="Privacy & Security"
+            subtitle="Learn how we protect and isolate your data"
+            onClick={() => navigate('/privacy-security')}
+          />
           <SettingsItem icon="help" label="Help & Support" />
         </div>
       </section>
