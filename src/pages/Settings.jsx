@@ -59,6 +59,8 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const {
+    isDualCurrencyEnabled,
+    setDualCurrencyEnabled,
     mainCurrency,
     secondaryCurrency,
     exchangeRate,
@@ -81,6 +83,9 @@ export default function Settings() {
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [currencyTargetType, setCurrencyTargetType] = useState('main'); // 'main' | 'secondary'
   const [currencySearch, setCurrencySearch] = useState('');
+
+  // Conflict Modal State when user tries to disable dual currency with active secondary records
+  const [conflictWarning, setConflictWarning] = useState(null);
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('category');
@@ -121,19 +126,34 @@ export default function Settings() {
     }
   };
 
+  const handleToggleDualCurrency = async () => {
+    const nextState = !isDualCurrencyEnabled;
+    const result = await setDualCurrencyEnabled(nextState);
+
+    if (result.success) {
+      showToast(
+        nextState
+          ? 'Dual Currency mode enabled!'
+          : 'Dual Currency mode disabled. Single currency active.'
+      );
+    } else if (result.reason === 'has_secondary_items') {
+      setConflictWarning(result.usage);
+    }
+  };
+
   const handleSelectCurrency = async (code) => {
-    if (currencyTargetType === 'main') {
-      if (code === secondaryCurrency) {
+    if (!isDualCurrencyEnabled || currencyTargetType === 'main') {
+      if (isDualCurrencyEnabled && code === secondaryCurrency) {
         showToast('Main and Secondary currencies should ideally be distinct.', true);
       }
       await setMainCurrency(code);
-      showToast(`Main currency set to ${code} (live rate updated)`);
+      showToast(`${isDualCurrencyEnabled ? 'Main currency' : 'Primary currency'} set to ${code}`);
     } else {
       if (code === mainCurrency) {
         showToast('Main and Secondary currencies should ideally be distinct.', true);
       }
       await setSecondaryCurrency(code);
-      showToast(`Secondary currency set to ${code} (live rate updated)`);
+      showToast(`Secondary currency set to ${code}`);
     }
   };
 
@@ -178,17 +198,80 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Dual Currency Setup Modal */}
+      {/* Conflict Warning Dialog Modal */}
+      {conflictWarning && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[80] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="app-card max-w-md w-full p-5 space-y-4 shadow-2xl border border-error/40 my-auto relative animate-fadeIn">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-error/15 text-error flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl">warning</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-headline text-base font-bold text-on-surface">
+                  Cannot Disable Dual Currency
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  You currently have existing records configured in a non-main currency (
+                  <strong className="text-on-surface font-mono">{secondaryCurrency}</strong>).
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container/60 rounded-xl border border-outline-variant/20 space-y-2 text-xs">
+              <div className="flex justify-between font-semibold text-on-surface">
+                <span>Active non-main bills/plans:</span>
+                <span className="font-mono text-error font-bold">{conflictWarning.billCount}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-on-surface">
+                <span>Non-main transactions:</span>
+                <span className="font-mono text-error font-bold">{conflictWarning.transactionCount}</span>
+              </div>
+
+              {conflictWarning.sampleItems && conflictWarning.sampleItems.length > 0 && (
+                <div className="pt-2 border-t border-outline-variant/20 space-y-1">
+                  <span className="text-[11px] text-outline uppercase font-bold tracking-wider block">
+                    Affected items:
+                  </span>
+                  <ul className="text-[11px] text-on-surface-variant space-y-1 list-disc pl-4">
+                    {conflictWarning.sampleItems.map((item, idx) => (
+                      <li key={idx} className="truncate">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              To turn off dual currency mode, please edit or update these items to use your main currency (
+              <strong className="text-on-surface font-mono">{mainCurrency}</strong>) first.
+            </p>
+
+            <div className="pt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setConflictWarning(null)}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Currency Setup Modal */}
       {isCurrencyModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="app-card max-w-lg w-full space-y-3.5 shadow-2xl border-secondary/40 max-h-[85vh] sm:max-h-[88vh] flex flex-col my-auto relative">
             <div className="flex justify-between items-center shrink-0 pb-2 border-b border-outline-variant/20">
               <div>
                 <h3 className="font-headline text-base font-bold text-on-surface">
-                  Dual Currency Configuration
+                  {isDualCurrencyEnabled ? 'Dual Currency Configuration' : 'Currency Preferences'}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                  Set main & secondary currencies with automatic live rates
+                  {isDualCurrencyEnabled
+                    ? 'Configure main and secondary currencies with live exchange rates'
+                    : 'Select your standard primary currency'}
                 </p>
               </div>
               <button
@@ -200,101 +283,137 @@ export default function Settings() {
               </button>
             </div>
 
-            {/* Currency Type Selector Tabs */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-surface-container rounded-xl shrink-0">
-              <button
-                type="button"
-                onClick={() => setCurrencyTargetType('main')}
-                className={`p-2.5 rounded-lg text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
-                  currencyTargetType === 'main'
-                    ? 'bg-surface-container-lowest text-secondary shadow-xs font-bold border border-secondary/30'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>{mainCurrencyInfo.flag}</span>
-                  <span>Main Currency</span>
-                </div>
-                <span className="text-[11px] font-mono text-outline">
-                  {mainCurrencyInfo.code} ({mainCurrencyInfo.symbol})
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCurrencyTargetType('secondary')}
-                className={`p-2.5 rounded-lg text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
-                  currencyTargetType === 'secondary'
-                    ? 'bg-surface-container-lowest text-secondary shadow-xs font-bold border border-secondary/30'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>{secondaryCurrencyInfo.flag}</span>
-                  <span>Secondary Currency</span>
-                </div>
-                <span className="text-[11px] font-mono text-outline">
-                  {secondaryCurrencyInfo.code} ({secondaryCurrencyInfo.symbol})
-                </span>
-              </button>
-            </div>
-
-            {/* Live Exchange Rate Box - Clean, no overflowing buttons */}
-            <div className="p-3.5 bg-secondary/10 border border-secondary/30 rounded-xl space-y-2 shrink-0">
-              <div className="flex items-center justify-between">
+            {/* Master Toggle Banner */}
+            <div className="p-3 bg-surface-container/60 rounded-xl flex items-center justify-between gap-3 shrink-0 border border-outline-variant/20">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-secondary text-base">
                     currency_exchange
                   </span>
-                  <span className="text-xs font-bold text-on-surface">Auto-Synced Exchange Rate</span>
+                  <span className="text-xs font-bold text-on-surface">Dual Currency Mode</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRefreshLiveRate}
-                  disabled={isRateLoading}
-                  className="text-[11px] font-semibold text-secondary hover:underline flex items-center gap-1 active:scale-95 disabled:opacity-50"
-                >
-                  <span
-                    className={`material-symbols-outlined text-sm ${
-                      isRateLoading ? 'animate-spin' : ''
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  Track bills and plans in two currencies with live exchange rates
+                </p>
+              </div>
+              <Toggle enabled={isDualCurrencyEnabled} onChange={handleToggleDualCurrency} />
+            </div>
+
+            {/* Dual Currency Active Content */}
+            {isDualCurrencyEnabled ? (
+              <>
+                {/* Currency Type Selector Tabs */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-surface-container rounded-xl shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyTargetType('main')}
+                    className={`p-2.5 rounded-lg text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
+                      currencyTargetType === 'main'
+                        ? 'bg-surface-container-lowest text-secondary shadow-xs font-bold border border-secondary/30'
+                        : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    sync
+                    <div className="flex items-center gap-1.5">
+                      <span>{mainCurrencyInfo.flag}</span>
+                      <span>Main Currency</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-outline">
+                      {mainCurrencyInfo.code} ({mainCurrencyInfo.symbol})
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyTargetType('secondary')}
+                    className={`p-2.5 rounded-lg text-xs font-semibold flex flex-col items-center gap-0.5 transition-all ${
+                      currencyTargetType === 'secondary'
+                        ? 'bg-surface-container-lowest text-secondary shadow-xs font-bold border border-secondary/30'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{secondaryCurrencyInfo.flag}</span>
+                      <span>Secondary Currency</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-outline">
+                      {secondaryCurrencyInfo.code} ({secondaryCurrencyInfo.symbol})
+                    </span>
+                  </button>
+                </div>
+
+                {/* Live Exchange Rate Box */}
+                <div className="p-3 bg-secondary/10 border border-secondary/30 rounded-xl space-y-2 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-secondary text-base">
+                        currency_exchange
+                      </span>
+                      <span className="text-xs font-bold text-on-surface">Auto-Synced Exchange Rate</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRefreshLiveRate}
+                      disabled={isRateLoading}
+                      className="text-[11px] font-semibold text-secondary hover:underline flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                    >
+                      <span
+                        className={`material-symbols-outlined text-sm ${
+                          isRateLoading ? 'animate-spin' : ''
+                        }`}
+                      >
+                        sync
+                      </span>
+                      <span>{isRateLoading ? 'Updating...' : 'Refresh Live Rate'}</span>
+                    </button>
+                  </div>
+
+                  <div className="pt-0.5">
+                    <span className="font-mono text-base sm:text-lg font-bold text-secondary">
+                      1 {mainCurrency} = {exchangeRate > 0 ? exchangeRate.toFixed(4) : '1.0000'} {secondaryCurrency}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-outline pt-1 border-t border-secondary/20 flex-wrap gap-1">
+                    <span>Free Live API (open.er-api.com)</span>
+                    <span>
+                      {lastRateUpdated
+                        ? `Live as of ${new Date(lastRateUpdated).toLocaleDateString()} ${new Date(
+                            lastRateUpdated
+                          ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                        : 'Updated on launch'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Live Dual Currency Display Preview */}
+                <div className="p-3 bg-surface-container/60 rounded-xl flex items-center justify-between shrink-0 border border-outline-variant/15">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
+                      Dual Currency Preview
+                    </span>
+                    <span className="text-xs text-on-surface-variant">
+                      Assigned currency bigger, converted below
+                    </span>
+                  </div>
+                  <DualCurrencyDisplay amount={100} fromCurrency={mainCurrency} primaryMode="assigned" align="right" />
+                </div>
+              </>
+            ) : (
+              /* Single Currency Active Content */
+              <div className="p-3 bg-surface-container/40 rounded-xl border border-outline-variant/15 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
+                    Current Currency
                   </span>
-                  <span>{isRateLoading ? 'Updating...' : 'Refresh Live Rate'}</span>
-                </button>
-              </div>
-
-              <div className="pt-0.5">
-                <span className="font-mono text-base sm:text-lg font-bold text-secondary">
-                  1 {mainCurrency} = {exchangeRate > 0 ? exchangeRate.toFixed(4) : '1.0000'} {secondaryCurrency}
+                  <span className="text-xs font-semibold text-on-surface">
+                    {mainCurrencyInfo.flag} {mainCurrencyInfo.name} ({mainCurrencyInfo.symbol})
+                  </span>
+                </div>
+                <span className="text-base font-mono font-bold text-secondary">
+                  {mainCurrencyInfo.code}
                 </span>
               </div>
-
-              <div className="flex items-center justify-between text-[10px] text-outline pt-1 border-t border-secondary/20 flex-wrap gap-1">
-                <span>Free Live API (open.er-api.com)</span>
-                <span>
-                  {lastRateUpdated
-                    ? `Live as of ${new Date(lastRateUpdated).toLocaleDateString()} ${new Date(
-                        lastRateUpdated
-                      ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                    : 'Updated on launch'}
-                </span>
-              </div>
-            </div>
-
-            {/* Live Dual Currency Display Preview */}
-            <div className="p-3 bg-surface-container/60 rounded-xl flex items-center justify-between shrink-0 border border-outline-variant/15">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
-                  Dual Currency Preview
-                </span>
-                <span className="text-xs text-on-surface-variant">
-                  Assigned currency bigger, converted below
-                </span>
-              </div>
-              <DualCurrencyDisplay amount={100} fromCurrency={mainCurrency} primaryMode="assigned" align="right" />
-            </div>
+            )}
 
             {/* Search Input for Currency Selection */}
             <div className="relative shrink-0">
@@ -306,19 +425,24 @@ export default function Settings() {
                 value={currencySearch}
                 onChange={(e) => setCurrencySearch(e.target.value)}
                 placeholder={`Search ${
-                  currencyTargetType === 'main' ? 'Main' : 'Secondary'
+                  isDualCurrencyEnabled
+                    ? currencyTargetType === 'main'
+                      ? 'Main'
+                      : 'Secondary'
+                    : 'Primary'
                 } currency (e.g. USD, PHP, EUR, ₱)...`}
                 className="w-full bg-surface-container pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm text-on-surface placeholder:text-outline/70 border border-outline-variant/30 outline-none focus:ring-1 focus:ring-secondary"
               />
             </div>
 
             {/* Currencies List */}
-            <div className="overflow-y-auto space-y-1.5 flex-1 pr-1 max-h-56 custom-scrollbar">
+            <div className="overflow-y-auto space-y-1.5 flex-1 pr-1 max-h-52 custom-scrollbar">
               {filteredCurrencies.map((c) => {
-                const isSelected =
-                  currencyTargetType === 'main'
-                    ? c.code === mainCurrency
-                    : c.code === secondaryCurrency;
+                const isSelected = !isDualCurrencyEnabled
+                  ? c.code === mainCurrency
+                  : currencyTargetType === 'main'
+                  ? c.code === mainCurrency
+                  : c.code === secondaryCurrency;
 
                 return (
                   <button
@@ -520,13 +644,19 @@ export default function Settings() {
           />
           <SettingsItem
             icon="currency_exchange"
-            label="Dual Currency Support"
-            subtitle={`Main: ${mainCurrencyInfo.code} (${mainCurrencyInfo.symbol}) • Sec: ${secondaryCurrencyInfo.code} (${secondaryCurrencyInfo.symbol}) • Rate: 1 ${mainCurrency} = ${exchangeRate.toFixed(2)} ${secondaryCurrency}`}
+            label={isDualCurrencyEnabled ? 'Dual Currency Support' : 'Currency Preferences'}
+            subtitle={
+              isDualCurrencyEnabled
+                ? `Main: ${mainCurrencyInfo.code} (${mainCurrencyInfo.symbol}) • Sec: ${secondaryCurrencyInfo.code} (${secondaryCurrencyInfo.symbol}) • Rate: 1 ${mainCurrency} = ${exchangeRate.toFixed(2)} ${secondaryCurrency}`
+                : `Active: ${mainCurrencyInfo.code} (${mainCurrencyInfo.symbol}) • Dual currency disabled`
+            }
             onClick={() => setIsCurrencyModalOpen(true)}
             trailing={
               <div className="flex items-center gap-1.5 bg-surface-container hover:bg-surface-container-high px-2.5 py-1 rounded-lg border border-outline-variant/30 transition-colors">
                 <span className="text-xs font-bold text-on-surface">
-                  {mainCurrencyInfo.flag} {mainCurrencyInfo.code} / {secondaryCurrencyInfo.flag} {secondaryCurrencyInfo.code}
+                  {isDualCurrencyEnabled
+                    ? `${mainCurrencyInfo.flag} ${mainCurrencyInfo.code} / ${secondaryCurrencyInfo.flag} ${secondaryCurrencyInfo.code}`
+                    : `${mainCurrencyInfo.flag} ${mainCurrencyInfo.code}`}
                 </span>
                 <span className="material-symbols-outlined text-outline text-base">chevron_right</span>
               </div>

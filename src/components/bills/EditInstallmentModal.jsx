@@ -4,7 +4,13 @@ import { computeInstallmentEndDate } from '../../services/firestoreService';
 import DualCurrencyDisplay from '../common/DualCurrencyDisplay';
 
 export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) {
-  const { mainCurrency, secondaryCurrency, mainCurrencyInfo, secondaryCurrencyInfo } = useCurrency();
+  const {
+    isDualCurrencyEnabled,
+    mainCurrency,
+    secondaryCurrency,
+    mainCurrencyInfo,
+    secondaryCurrencyInfo,
+  } = useCurrency();
 
   const [name, setName] = useState('');
   const [bankOrMerchant, setBankOrMerchant] = useState('');
@@ -101,43 +107,45 @@ export default function EditInstallmentModal({ plan, isOpen, onClose, onSave }) 
           </button>
         </div>
 
-        {/* Currency Selection */}
-        <div className="space-y-1.5 shrink-0">
-          <label className="text-on-surface-variant font-semibold text-xs block">
-            Plan Currency
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPlanCurrency(mainCurrency)}
-              className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
-                planCurrency === mainCurrency
-                  ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
-                  : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
-              }`}
-            >
-              <span>{mainCurrencyInfo.flag}</span>
-              <span>
-                Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
-              </span>
-            </button>
+        {/* Currency Selection - Only when Dual Currency is Enabled */}
+        {isDualCurrencyEnabled && (
+          <div className="space-y-1.5 shrink-0">
+            <label className="text-on-surface-variant font-semibold text-xs block">
+              Plan Currency
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPlanCurrency(mainCurrency)}
+                className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                  planCurrency === mainCurrency
+                    ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                    : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                <span>{mainCurrencyInfo.flag}</span>
+                <span>
+                  Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setPlanCurrency(secondaryCurrency)}
-              className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
-                planCurrency === secondaryCurrency
-                  ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
-                  : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
-              }`}
-            >
-              <span>{secondaryCurrencyInfo.flag}</span>
-              <span>
-                Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setPlanCurrency(secondaryCurrency)}
+                className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                  planCurrency === secondaryCurrency
+                    ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                    : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                <span>{secondaryCurrencyInfo.flag}</span>
+                <span>
+                  Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
+                </span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Inputs */}
         <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scrollbar">

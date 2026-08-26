@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { fetchLiveExchangeRate } from '../services/exchangeRateService';
 
@@ -38,6 +38,11 @@ const CurrencyContext = createContext();
 export function CurrencyProvider({ children }) {
   const { user } = useAuth();
 
+  // Dual currency master enable switch (defaults to false for single currency users)
+  const [isDualCurrencyEnabled, setIsDualCurrencyEnabledState] = useState(() => {
+    return localStorage.getItem('mybadyet_dual_currency_enabled') === 'true';
+  });
+
   // Main currency (defaults to USD or saved preference)
   const [mainCurrency, setMainCurrencyState] = useState(() => {
     return localStorage.getItem('mybadyet_main_currency') || localStorage.getItem('mybadyet_currency') || 'USD';
@@ -73,7 +78,7 @@ export function CurrencyProvider({ children }) {
         localStorage.setItem('mybadyet_exchange_rate', String(result.rate));
         localStorage.setItem('mybadyet_rate_updated', result.timestamp);
 
-        // Optionally persist to Firestore if logged in
+        // Persist to Firestore if logged in
         if (user?.uid) {
           try {
             const userRef = doc(db, 'users', user.uid);
@@ -94,13 +99,15 @@ export function CurrencyProvider({ children }) {
     }
   }, [user]);
 
-  // Always fetch fresh live exchange rate on app open / refresh
+  // Fetch live exchange rate on app open / refresh when dual currency is enabled
   useEffect(() => {
     if (!initialFetchDone.current) {
       initialFetchDone.current = true;
-      fetchAndUpdateRate(mainCurrency, secondaryCurrency, true);
+      if (isDualCurrencyEnabled) {
+        fetchAndUpdateRate(mainCurrency, secondaryCurrency, true);
+      }
     }
-  }, [mainCurrency, secondaryCurrency, fetchAndUpdateRate]);
+  }, [isDualCurrencyEnabled, mainCurrency, secondaryCurrency, fetchAndUpdateRate]);
 
   // Load preferences from Firestore on auth change
   useEffect(() => {
@@ -113,8 +120,12 @@ export function CurrencyProvider({ children }) {
         const snap = await getDoc(userRef);
         if (snap.exists() && isMounted) {
           const data = snap.data();
+          const userDualEnabled = Boolean(data.isDualCurrencyEnabled);
           const userMain = data.mainCurrency || data.currency;
           const userSec = data.secondaryCurrency;
+
+          setIsDualCurrencyEnabledState(userDualEnabled);
+          localStorage.setItem('mybadyet_dual_currency_enabled', String(userDualEnabled));
 
           let targetMain = mainCurrency;
           let targetSec = secondaryCurrency;
@@ -132,8 +143,9 @@ export function CurrencyProvider({ children }) {
             targetSec = userSec;
           }
 
-          // Fetch fresh rate for the loaded currencies
-          fetchAndUpdateRate(targetMain, targetSec, true);
+          if (userDualEnabled) {
+            fetchAndUpdateRate(targetMain, targetSec, true);
+          }
         }
       } catch (err) {
         console.warn('Could not fetch currency preferences from Firestore:', err);
@@ -160,6 +172,80 @@ export function CurrencyProvider({ children }) {
     [user]
   );
 
+  // Checks if user has any existing bills, plans, or transactions in secondary/different currency
+  const checkDualCurrencyUsage = useCallback(async () => {
+    if (!user?.uid) {
+      return { canDisable: true, billCount: 0, transactionCount: 0, sampleItems: [] };
+    }
+
+    try {
+      // 1. Fetch user's bills & plans
+      const billsRef = collection(db, 'users', user.uid, 'bills');
+      const billsSnap = await getDocs(billsRef);
+      const nonMainBills = [];
+      billsSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!data.isDeleted && data.currency && data.currency.toUpperCase() !== mainCurrency.toUpperCase()) {
+          nonMainBills.push({ id: docSnap.id, ...data });
+        }
+      });
+
+      // 2. Fetch user's transactions
+      const txRef = collection(db, 'users', user.uid, 'transactions');
+      const txSnap = await getDocs(txRef);
+      const nonMainTransactions = [];
+      txSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!data.isDeleted && data.currency && data.currency.toUpperCase() !== mainCurrency.toUpperCase()) {
+          nonMainTransactions.push({ id: docSnap.id, ...data });
+        }
+      });
+
+      const hasSecondary = nonMainBills.length > 0 || nonMainTransactions.length > 0;
+
+      const sampleItems = [
+        ...nonMainBills.slice(0, 3).map((b) => `Bill/Plan: "${b.name}" (${b.currency})`),
+        ...nonMainTransactions.slice(0, 3).map((t) => `Expense: "${t.description}" (${t.currency})`),
+      ];
+
+      return {
+        canDisable: !hasSecondary,
+        billCount: nonMainBills.length,
+        transactionCount: nonMainTransactions.length,
+        sampleItems,
+      };
+    } catch (err) {
+      console.warn('Error checking dual currency usage:', err);
+      return { canDisable: true, billCount: 0, transactionCount: 0, sampleItems: [] };
+    }
+  }, [user, mainCurrency]);
+
+  // Master Toggle for Dual Currency
+  const setDualCurrencyEnabled = async (enable) => {
+    if (enable) {
+      setIsDualCurrencyEnabledState(true);
+      localStorage.setItem('mybadyet_dual_currency_enabled', 'true');
+      await syncToFirestore({ isDualCurrencyEnabled: true });
+      await fetchAndUpdateRate(mainCurrency, secondaryCurrency, true);
+      return { success: true };
+    }
+
+    // If disabling, check for existing items using secondary currency
+    const usage = await checkDualCurrencyUsage();
+    if (!usage.canDisable) {
+      return {
+        success: false,
+        reason: 'has_secondary_items',
+        usage,
+      };
+    }
+
+    setIsDualCurrencyEnabledState(false);
+    localStorage.setItem('mybadyet_dual_currency_enabled', 'false');
+    await syncToFirestore({ isDualCurrencyEnabled: false });
+    return { success: true };
+  };
+
   // Set Main Currency
   const setMainCurrency = async (newCode) => {
     const found = CURRENCIES.find((c) => c.code === newCode);
@@ -171,7 +257,10 @@ export function CurrencyProvider({ children }) {
 
     const updates = { mainCurrency: newCode, currency: newCode };
     await syncToFirestore(updates);
-    await fetchAndUpdateRate(newCode, secondaryCurrency, true);
+
+    if (isDualCurrencyEnabled) {
+      await fetchAndUpdateRate(newCode, secondaryCurrency, true);
+    }
   };
 
   // Set Secondary Currency
@@ -184,7 +273,10 @@ export function CurrencyProvider({ children }) {
 
     const updates = { secondaryCurrency: newCode };
     await syncToFirestore(updates);
-    await fetchAndUpdateRate(mainCurrency, newCode, true);
+
+    if (isDualCurrencyEnabled) {
+      await fetchAndUpdateRate(mainCurrency, newCode, true);
+    }
   };
 
   // Explicit refresh rate button
@@ -270,6 +362,18 @@ export function CurrencyProvider({ children }) {
       const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
       const nativeCode = fromCurrency || mainCurrency;
 
+      if (!isDualCurrencyEnabled) {
+        const formatted = formatCurrency(num, nativeCode);
+        return {
+          primaryFormatted: formatted,
+          secondaryFormatted: formatted,
+          primaryCode: nativeCode,
+          secondaryCode: nativeCode,
+          primaryAmount: num,
+          secondaryAmount: num,
+        };
+      }
+
       if (primaryMode === 'assigned' || primaryMode === 'native') {
         // Native assigned currency is primary (bigger), converted opposite is secondary (smaller)
         const primaryCode = nativeCode;
@@ -299,12 +403,17 @@ export function CurrencyProvider({ children }) {
         secondaryAmount: secondaryAmt,
       };
     },
-    [mainCurrency, secondaryCurrency, convertAmount, convertToMain, convertToSecondary, formatCurrency]
+    [isDualCurrencyEnabled, mainCurrency, secondaryCurrency, convertAmount, convertToMain, convertToSecondary, formatCurrency]
   );
 
   return (
     <CurrencyContext.Provider
       value={{
+        // Dual Currency Master Switch
+        isDualCurrencyEnabled,
+        setDualCurrencyEnabled,
+        checkDualCurrencyUsage,
+
         // Dual Currency States
         mainCurrency,
         secondaryCurrency,

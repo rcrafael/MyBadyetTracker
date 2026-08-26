@@ -7,7 +7,14 @@ import { useCurrency } from '../context/CurrencyContext';
 export default function AddExpense() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { mainCurrency, mainCurrencyInfo, secondaryCurrencyInfo, convertToSecondary, formatCurrency } = useCurrency();
+  const {
+    isDualCurrencyEnabled,
+    mainCurrency,
+    mainCurrencyInfo,
+    secondaryCurrencyInfo,
+    convertToSecondary,
+    formatCurrency,
+  } = useCurrency();
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [amount, setAmount] = useState('');
@@ -105,8 +112,8 @@ export default function AddExpense() {
           />
         </div>
 
-        {/* Secondary Converted Preview for day-to-day reference */}
-        {parsedAmount > 0 && mainCurrency !== secondaryCurrencyInfo.code && (
+        {/* Secondary Converted Preview for day-to-day reference (Only when Dual Currency is Enabled) */}
+        {isDualCurrencyEnabled && parsedAmount > 0 && mainCurrency !== secondaryCurrencyInfo.code && (
           <p className="text-xs font-mono font-medium text-on-surface-variant pt-1 animate-fadeIn">
             ≈ {formatCurrency(convertedSecondaryAmount, secondaryCurrencyInfo.code)}
           </p>

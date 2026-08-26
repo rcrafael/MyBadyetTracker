@@ -160,6 +160,7 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
 
 export default function Bills() {
   const {
+    isDualCurrencyEnabled,
     mainCurrency,
     secondaryCurrency,
     mainCurrencyInfo,
@@ -470,43 +471,45 @@ export default function Bills() {
               </button>
             </div>
 
-            {/* Currency Selector (Main vs Secondary) */}
-            <div className="space-y-1.5 shrink-0">
-              <label className="text-on-surface-variant font-semibold text-xs block">
-                Select Currency
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNewBillCurrency(mainCurrency)}
-                  className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
-                    newBillCurrency === mainCurrency
-                      ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
-                      : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
-                  }`}
-                >
-                  <span>{mainCurrencyInfo.flag}</span>
-                  <span>
-                    Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
-                  </span>
-                </button>
+            {/* Currency Selector (Main vs Secondary) - Only when Dual Currency is Enabled */}
+            {isDualCurrencyEnabled && (
+              <div className="space-y-1.5 shrink-0">
+                <label className="text-on-surface-variant font-semibold text-xs block">
+                  Select Currency
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBillCurrency(mainCurrency)}
+                    className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                      newBillCurrency === mainCurrency
+                        ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                        : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                    }`}
+                  >
+                    <span>{mainCurrencyInfo.flag}</span>
+                    <span>
+                      Main ({mainCurrencyInfo.code} {mainCurrencyInfo.symbol})
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setNewBillCurrency(secondaryCurrency)}
-                  className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
-                    newBillCurrency === secondaryCurrency
-                      ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
-                      : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
-                  }`}
-                >
-                  <span>{secondaryCurrencyInfo.flag}</span>
-                  <span>
-                    Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBillCurrency(secondaryCurrency)}
+                    className={`p-2 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all ${
+                      newBillCurrency === secondaryCurrency
+                        ? 'bg-secondary/15 border-secondary text-secondary font-bold shadow-xs'
+                        : 'bg-surface-container/60 border-transparent text-on-surface-variant hover:bg-surface-container'
+                    }`}
+                  >
+                    <span>{secondaryCurrencyInfo.flag}</span>
+                    <span>
+                      Sec ({secondaryCurrencyInfo.code} {secondaryCurrencyInfo.symbol})
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1 custom-scrollbar">
               <div>
