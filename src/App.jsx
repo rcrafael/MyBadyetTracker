@@ -10,6 +10,7 @@ import AddExpense from './pages/AddExpense';
 import Bills from './pages/Bills';
 import Budget from './pages/Budget';
 import Settings from './pages/Settings';
+import PrivacySecurity from './pages/PrivacySecurity';
 import Login from './pages/Login';
 
 function ProtectedRoute({ children }) {
@@ -72,6 +73,7 @@ export default function App() {
                   <Route path="bills" element={<Bills />} />
                   <Route path="budget" element={<Budget />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="privacy-security" element={<PrivacySecurity />} />
                 </Route>
 
                 {/* Fallback */}
