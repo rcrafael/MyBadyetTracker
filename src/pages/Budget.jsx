@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   getBudgetsFromFirestore,
   getTransactionsFromFirestore,
   getCategoriesFromFirestore,
   saveBudgetToFirestore,
+  updateCategoryInFirestore,
+  deleteCategoryFromFirestore,
 } from '../services/firestoreService';
 import { useCurrency } from '../context/CurrencyContext';
 
@@ -43,7 +45,14 @@ function BudgetCard({ budget, categoryMeta, onEdit }) {
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-semibold text-on-surface truncate capitalize">{catName}</h4>
+            <div className="flex items-center gap-1.5">
+              <h4 className="text-sm font-semibold text-on-surface truncate capitalize">{catName}</h4>
+              {categoryMeta?.isUserDefined && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant font-medium shrink-0">
+                  Custom
+                </span>
+              )}
+            </div>
             <p className="text-xs text-outline truncate">
               {formatCurrency(spent)} of {formatCurrency(limit)}
             </p>
@@ -54,7 +63,7 @@ function BudgetCard({ budget, categoryMeta, onEdit }) {
             {statusLabel}
           </span>
           <button
-            title="Edit Budget Limit"
+            title="Edit Budget / Category"
             onClick={() => onEdit(budget)}
             className="p-1 text-outline hover:text-secondary rounded-md opacity-70 group-hover:opacity-100 transition-opacity"
           >
@@ -85,8 +94,15 @@ export default function Budget() {
   const { currencyInfo, formatCurrency } = useCurrency();
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [transactionsList, setTransactionsList] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit Modal State
   const [editingBudget, setEditingBudget] = useState(null);
+  const [editedCategoryName, setEditedCategoryName] = useState('');
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+
+  // Add Budget Modal State
   const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [newLimit, setNewLimit] = useState('');
@@ -106,6 +122,7 @@ export default function Budget() {
       ]);
 
       setCategories(rawCategories);
+      setTransactionsList(transactions);
 
       // Aggregate current month's actual spending per category
       const currentMonthKey = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
@@ -143,10 +160,52 @@ export default function Budget() {
     }
   }
 
+  // Open Edit Modal
+  const handleOpenEdit = (budget) => {
+    const meta = categories.find((c) => c.id === budget.category);
+    setEditingBudget(budget);
+    setEditedCategoryName(meta?.name || budget.category);
+  };
+
+  // Get usage count for the currently edited category
+  const activeEditingCategoryUsage = useMemo(() => {
+    if (!editingBudget) return { isUserDefined: false, usedCount: 0, canModifyNameOrDelete: false };
+    const meta = categories.find((c) => c.id === editingBudget.category);
+    const isUserDefined = meta?.isUserDefined === true;
+    const usedCount = transactionsList.filter(
+      (t) => !t.isDeleted && String(t.category).toLowerCase() === String(editingBudget.category).toLowerCase()
+    ).length;
+
+    return {
+      isUserDefined,
+      usedCount,
+      canModifyNameOrDelete: isUserDefined && usedCount === 0,
+      meta,
+    };
+  }, [editingBudget, categories, transactionsList]);
+
   const handleSaveBudget = async (e) => {
     e.preventDefault();
     if (!editingBudget) return;
     try {
+      // 1. Update Category Name if user-defined and unused
+      if (
+        activeEditingCategoryUsage.canModifyNameOrDelete &&
+        editedCategoryName.trim() &&
+        editedCategoryName.trim() !== activeEditingCategoryUsage.meta?.name
+      ) {
+        await updateCategoryInFirestore(editingBudget.category, {
+          name: editedCategoryName.trim(),
+        });
+
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === editingBudget.category ? { ...c, name: editedCategoryName.trim() } : c
+          )
+        );
+      }
+
+      // 2. Always allow updating the monthly budget limit anytime
       await saveBudgetToFirestore(editingBudget);
       setBudgets((prev) =>
         prev.map((b) =>
@@ -155,10 +214,28 @@ export default function Budget() {
             : b
         )
       );
+
       setEditingBudget(null);
-      showToast('Budget limit updated!');
+      showToast('Budget updated successfully!');
     } catch (err) {
-      showToast('Failed to save budget.', true);
+      showToast(err.message || 'Failed to save budget.', true);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!editingBudget || !activeEditingCategoryUsage.canModifyNameOrDelete) return;
+    setIsDeletingCategory(true);
+    try {
+      await deleteCategoryFromFirestore(editingBudget.category);
+
+      setCategories((prev) => prev.filter((c) => c.id !== editingBudget.category));
+      setBudgets((prev) => prev.filter((b) => b.category !== editingBudget.category));
+      setEditingBudget(null);
+      showToast(`Category "${editedCategoryName}" and its budget deleted!`);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete category.', true);
+    } finally {
+      setIsDeletingCategory(false);
     }
   };
 
@@ -196,37 +273,94 @@ export default function Budget() {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* Toast Notification */}
+      {/* Toast Notification (Top-most z-index to stay above modals) */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${toastMessage.isError ? 'bg-error text-white' : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
-            }`}
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-[9999] p-3.5 rounded-xl shadow-2xl ring-1 ring-black/10 flex items-center justify-between text-xs font-semibold animate-fadeIn ${
+            toastMessage.isError
+              ? 'bg-error text-white shadow-error/30'
+              : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed shadow-primary/30'
+          }`}
         >
           <span>{toastMessage.text}</span>
         </div>
       )}
 
-      {/* Edit Budget Limit Modal */}
+      {/* Edit Budget & Category Modal */}
       {editingBudget && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <form
             onSubmit={handleSaveBudget}
-            className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative"
+            className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative animate-fadeIn"
           >
-            <div className="flex justify-between items-center">
-              <h3 className="font-headline text-base font-bold text-on-surface capitalize">
-                Edit {editingBudget.category} Budget
-              </h3>
+            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-headline text-base font-bold text-on-surface capitalize truncate">
+                  Edit {activeEditingCategoryUsage.meta?.name || editingBudget.category}
+                </h3>
+                <p className="text-[11px] text-on-surface-variant">
+                  Update spending limit and category name
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setEditingBudget(null)}
-                className="text-outline hover:text-on-surface p-1"
+                className="text-outline hover:text-on-surface p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
+              {/* Category Name Section */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-on-surface-variant font-semibold block">
+                    Category Name
+                  </label>
+                  {activeEditingCategoryUsage.isUserDefined ? (
+                    activeEditingCategoryUsage.usedCount === 0 ? (
+                      <span className="text-[10px] text-success font-semibold flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-xs">edit</span>
+                        Editable (Unused)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-outline font-semibold flex items-center gap-0.5" title="Category is used in transactions">
+                        <span className="material-symbols-outlined text-xs">lock</span>
+                        Used in {activeEditingCategoryUsage.usedCount} tx(s)
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[10px] text-outline font-semibold flex items-center gap-0.5" title="Default categories cannot be renamed">
+                      <span className="material-symbols-outlined text-xs">lock</span>
+                      Default Category
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="text"
+                  value={editedCategoryName}
+                  onChange={(e) => setEditedCategoryName(e.target.value)}
+                  disabled={!activeEditingCategoryUsage.canModifyNameOrDelete}
+                  placeholder="Category Name"
+                  className={`w-full px-3 py-2 rounded-lg text-on-surface outline-none border transition-all ${
+                    activeEditingCategoryUsage.canModifyNameOrDelete
+                      ? 'bg-surface-container border-outline-variant/40 focus:ring-1 focus:ring-secondary focus:border-secondary'
+                      : 'bg-surface-container/50 border-transparent text-outline cursor-not-allowed opacity-80'
+                  }`}
+                  required
+                />
+                {!activeEditingCategoryUsage.canModifyNameOrDelete && (
+                  <p className="text-[10px] text-outline mt-1">
+                    {!activeEditingCategoryUsage.isUserDefined
+                      ? 'Default system category names cannot be changed.'
+                      : `Category cannot be renamed while it has ${activeEditingCategoryUsage.usedCount} active transaction(s).`}
+                  </p>
+                )}
+              </div>
+
+              {/* Monthly Spending Limit (Always editable anytime) */}
               <div>
                 <label className="text-on-surface-variant font-semibold block mb-1">
                   Monthly Spending Limit ({currencyInfo.symbol})
@@ -239,26 +373,46 @@ export default function Budget() {
                   onChange={(e) =>
                     setEditingBudget({ ...editingBudget, limit: e.target.value })
                   }
-                  className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary font-mono font-bold text-sm"
+                  placeholder="e.g. 500"
+                  className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary font-mono font-bold text-sm border border-outline-variant/40"
                   required
                 />
+                <span className="text-[10px] text-secondary font-medium block mt-1">
+                  ✓ Budget limits can be updated anytime
+                </span>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingBudget(null)}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs"
-              >
-                Save Limit
-              </button>
+            {/* Actions */}
+            <div className="pt-2 border-t border-outline-variant/20 flex flex-col gap-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBudget(null)}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+
+              {/* Delete Category Button (Only allowed if unused and user-defined) */}
+              {activeEditingCategoryUsage.canModifyNameOrDelete && (
+                <button
+                  type="button"
+                  onClick={handleDeleteCategory}
+                  disabled={isDeletingCategory}
+                  className="w-full py-1.5 rounded-xl text-xs font-semibold text-error hover:bg-error-container/20 border border-error/30 transition-colors flex items-center justify-center gap-1 mt-1"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                  <span>{isDeletingCategory ? 'Deleting...' : 'Delete Unused Category'}</span>
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -298,7 +452,7 @@ export default function Budget() {
                   <option value="">-- Choose Category --</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.name} {c.isUserDefined ? '(Custom)' : ''}
                     </option>
                   ))}
                 </select>
@@ -410,7 +564,7 @@ export default function Budget() {
                   key={b.id || b.category}
                   budget={b}
                   categoryMeta={meta}
-                  onEdit={setEditingBudget}
+                  onEdit={handleOpenEdit}
                 />
               );
             })

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   getCategoriesFromFirestore,
   addCategoryToFirestore,
+  updateCategoryInFirestore,
+  deleteCategoryFromFirestore,
+  getTransactionsFromFirestore,
 } from '../services/firestoreService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -89,6 +92,14 @@ export default function Settings() {
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('category');
+  const [transactionsList, setTransactionsList] = useState([]);
+
+  // Edit Category Modal State
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editedCatName, setEditedCatName] = useState('');
+  const [editedCatIcon, setEditedCatIcon] = useState('category');
+  const [isDeletingCat, setIsDeletingCat] = useState(false);
+
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
@@ -97,12 +108,64 @@ export default function Settings() {
 
   async function loadCategories() {
     try {
-      const data = await getCategoriesFromFirestore(user?.uid);
-      setCategories(data);
+      const [catData, txData] = await Promise.all([
+        getCategoriesFromFirestore(user?.uid),
+        getTransactionsFromFirestore(user?.uid),
+      ]);
+      setCategories(catData);
+      setTransactionsList(txData);
     } catch (err) {
-      console.error('Failed to load categories:', err);
+      console.error('Failed to load categories and transactions:', err);
     }
   }
+
+  const handleOpenEditCategory = (cat) => {
+    setEditingCategory(cat);
+    setEditedCatName(cat.name);
+    setEditedCatIcon(cat.icon || 'category');
+  };
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    try {
+      await updateCategoryInFirestore(
+        editingCategory.id,
+        {
+          name: editedCatName.trim(),
+          icon: editedCatIcon,
+        },
+        user?.uid
+      );
+
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === editingCategory.id
+            ? { ...c, name: editedCatName.trim(), icon: editedCatIcon }
+            : c
+        )
+      );
+      setEditingCategory(null);
+      showToast(`Category updated to "${editedCatName.trim()}"!`);
+    } catch (err) {
+      showToast(err.message || 'Error updating category.', true);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!editingCategory) return;
+    setIsDeletingCat(true);
+    try {
+      await deleteCategoryFromFirestore(editingCategory.id, user?.uid);
+      setCategories((prev) => prev.filter((c) => c.id !== editingCategory.id));
+      setEditingCategory(null);
+      showToast(`Category "${editedCatName}" deleted!`);
+    } catch (err) {
+      showToast(err.message || 'Error deleting category.', true);
+    } finally {
+      setIsDeletingCat(false);
+    }
+  };
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
@@ -185,13 +248,13 @@ export default function Settings() {
 
   return (
     <div className="space-y-5 pb-6">
-      {/* Toast Notification */}
+      {/* Toast Notification (Top-most z-index to stay above modals) */}
       {toastMessage && (
         <div
-          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-50 p-3.5 rounded-xl shadow-lg flex items-center justify-between text-xs font-semibold ${
+          className={`fixed top-16 left-4 right-4 max-w-md mx-auto z-[9999] p-3.5 rounded-xl shadow-2xl ring-1 ring-black/10 flex items-center justify-between text-xs font-semibold animate-fadeIn ${
             toastMessage.isError
-              ? 'bg-error text-white'
-              : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed'
+              ? 'bg-error text-white shadow-error/30'
+              : 'bg-primary text-white dark:bg-surface-container-highest dark:text-primary-fixed shadow-primary/30'
           }`}
         >
           <span>{toastMessage.text}</span>
@@ -568,6 +631,150 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Edit Category Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          {(() => {
+            const usedCount = transactionsList.filter(
+              (t) =>
+                !t.isDeleted &&
+                String(t.category).toLowerCase() === String(editingCategory.id).toLowerCase()
+            ).length;
+            const canModifyOrDelete = editingCategory.isUserDefined && usedCount === 0;
+
+            return (
+              <form
+                onSubmit={handleUpdateCategory}
+                className="app-card max-w-sm w-full space-y-4 shadow-2xl border-secondary/40 my-auto relative animate-fadeIn"
+              >
+                <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-headline text-base font-bold text-on-surface truncate">
+                      Manage Category
+                    </h3>
+                    <p className="text-[11px] text-on-surface-variant">
+                      {editingCategory.isUserDefined ? 'User-defined Category' : 'Default System Category'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCategory(null)}
+                    className="text-outline hover:text-on-surface p-1 rounded-lg"
+                  >
+                    <span className="material-symbols-outlined text-lg">close</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  {/* Status Banner */}
+                  <div className="p-2.5 rounded-xl bg-surface-container/60 border border-outline-variant/20 flex items-center justify-between gap-2">
+                    <span className="text-on-surface-variant font-medium">Status:</span>
+                    {!editingCategory.isUserDefined ? (
+                      <span className="text-secondary font-bold inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">verified</span>
+                        Default (Protected)
+                      </span>
+                    ) : usedCount === 0 ? (
+                      <span className="text-success font-bold inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">check_circle</span>
+                        Unused (Editable & Deletable)
+                      </span>
+                    ) : (
+                      <span className="text-warning font-bold inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">lock</span>
+                        Used in {usedCount} transaction(s)
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-on-surface-variant font-semibold block mb-1">
+                      Category Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editedCatName}
+                      onChange={(e) => setEditedCatName(e.target.value)}
+                      disabled={!canModifyOrDelete}
+                      placeholder="Category Name"
+                      className={`w-full px-3 py-2 rounded-lg text-on-surface outline-none border transition-all ${
+                        canModifyOrDelete
+                          ? 'bg-surface-container border-outline-variant/40 focus:ring-1 focus:ring-secondary focus:border-secondary'
+                          : 'bg-surface-container/50 border-transparent text-outline cursor-not-allowed opacity-80'
+                      }`}
+                      required
+                    />
+                    {!canModifyOrDelete && (
+                      <p className="text-[10px] text-outline mt-1">
+                        {!editingCategory.isUserDefined
+                          ? 'Default category names cannot be modified.'
+                          : `Cannot rename or delete because this category is used in ${usedCount} active transaction(s).`}
+                      </p>
+                    )}
+                  </div>
+
+                  {canModifyOrDelete && (
+                    <div>
+                      <label className="text-on-surface-variant font-semibold block mb-1">
+                        Icon
+                      </label>
+                      <select
+                        value={editedCatIcon}
+                        onChange={(e) => setEditedCatIcon(e.target.value)}
+                        className="w-full bg-surface-container px-3 py-2 rounded-lg text-on-surface outline-none focus:ring-1 focus:ring-secondary border border-outline-variant/40"
+                      >
+                        <option value="flight">flight (Travel)</option>
+                        <option value="fitness_center">fitness_center (Gym)</option>
+                        <option value="pets">pets (Pets)</option>
+                        <option value="home">home (Home)</option>
+                        <option value="medical_services">medical_services (Medical)</option>
+                        <option value="work">work (Work)</option>
+                        <option value="shopping_bag">shopping_bag (Shopping)</option>
+                        <option value="restaurant">restaurant (Food)</option>
+                        <option value="category">category (General)</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2 border-t border-outline-variant/20">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCategory(null)}
+                      className="flex-1 py-2 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
+                    >
+                      {canModifyOrDelete ? 'Cancel' : 'Close'}
+                    </button>
+
+                    {canModifyOrDelete && (
+                      <button
+                        type="submit"
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs transition-all"
+                      >
+                        Save Name
+                      </button>
+                    )}
+                  </div>
+
+                  {canModifyOrDelete && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteCategory}
+                      disabled={isDeletingCat}
+                      className="w-full py-1.5 rounded-xl text-xs font-semibold text-error hover:bg-error-container/20 border border-error/30 transition-colors flex items-center justify-center gap-1 mt-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      <span>{isDeletingCat ? 'Deleting...' : 'Delete Unused Category'}</span>
+                    </button>
+                  )}
+                </div>
+              </form>
+            );
+          })()}
+        </div>
+      )}
+
       {/* User Profile Card */}
       {user && (
         <section className="app-card flex items-center justify-between gap-3 p-4">
@@ -603,10 +810,15 @@ export default function Settings() {
       {/* Categories Grid Section */}
       <section className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h2 className="font-headline text-base sm:text-lg font-bold text-on-surface">Categories</h2>
+          <div>
+            <h2 className="font-headline text-base sm:text-lg font-bold text-on-surface">Categories</h2>
+            <p className="text-[11px] text-on-surface-variant">
+              Tap any category to inspect, rename, or delete if unused
+            </p>
+          </div>
           <button
             onClick={() => setIsAddCatModalOpen(true)}
-            className="text-xs font-semibold text-secondary flex items-center gap-1 hover:underline active:scale-95 transition-all"
+            className="text-xs font-semibold text-secondary flex items-center gap-1 hover:underline active:scale-95 transition-all shrink-0"
           >
             <span className="material-symbols-outlined text-base">add_circle</span>
             <span>Add Category</span>
@@ -614,19 +826,32 @@ export default function Settings() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           {categories.map((cat) => (
-            <div
+            <button
               key={cat.id}
-              className="app-card flex flex-col items-center justify-center p-3 text-center gap-1.5"
+              type="button"
+              onClick={() => handleOpenEditCategory(cat)}
+              className="app-card flex flex-col items-center justify-center p-3 text-center gap-1.5 hover:border-secondary/40 active:scale-98 transition-all cursor-pointer group text-left w-full"
             >
-              <div className={`w-10 h-10 rounded-full ${cat.color || 'bg-surface-container'} flex items-center justify-center shrink-0`}>
+              <div className={`w-10 h-10 rounded-full ${cat.color || 'bg-surface-container'} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
                 <span className={`material-symbols-outlined filled ${cat.textColor || 'text-on-surface'} text-xl`}>
                   {cat.icon || 'category'}
                 </span>
               </div>
-              <span className="text-xs font-semibold text-on-surface truncate max-w-full px-1">
-                {cat.name}
-              </span>
-            </div>
+              <div className="w-full text-center">
+                <span className="text-xs font-semibold text-on-surface truncate block px-1">
+                  {cat.name}
+                </span>
+                {cat.isUserDefined ? (
+                  <span className="text-[9px] text-secondary font-medium block">
+                    Custom
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-outline font-medium block">
+                    Default
+                  </span>
+                )}
+              </div>
+            </button>
           ))}
         </div>
       </section>
