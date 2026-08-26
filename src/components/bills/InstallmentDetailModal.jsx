@@ -1,9 +1,18 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { generateInstallmentSchedule } from '../../services/firestoreService';
 
-export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay }) {
+export default function InstallmentDetailModal({
+  bill,
+  isOpen,
+  onClose,
+  onPay,
+  onPayInFull,
+  onEdit,
+  onDelete,
+}) {
   const { formatCurrency } = useCurrency();
+  const [showPayInFullConfirm, setShowPayInFullConfirm] = useState(false);
 
   const details = useMemo(() => {
     if (!bill) return null;
@@ -27,7 +36,7 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
     const startDate = bill.startDate || bill.dueDate || new Date().toISOString().split('T')[0];
     const schedule = generateInstallmentSchedule(startDate, totalMonths, monthlyAmount, paidInstallments);
 
-    const isFullyPaid = paidInstallments >= totalMonths || bill.status === 'paid' && currentInstallment >= totalMonths;
+    const isFullyPaid = paidInstallments >= totalMonths || (bill.status === 'paid' && currentInstallment >= totalMonths);
 
     return {
       totalMonths,
@@ -79,7 +88,7 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
                 {details.isFullyPaid ? (
                   <span className="text-success font-semibold flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">check_circle</span>
-                    Installment plan completed
+                    Installment plan fully completed
                   </span>
                 ) : (
                   <span>
@@ -89,14 +98,42 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close modal"
-            className="p-1 text-outline hover:text-on-surface rounded-lg hover:bg-surface-container transition-colors shrink-0"
-          >
-            <span className="material-symbols-outlined text-xl">close</span>
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onEdit(bill);
+                }}
+                title="Edit Plan"
+                className="p-1.5 text-outline hover:text-secondary rounded-lg hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">edit</span>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onDelete(bill.id, bill.name);
+                }}
+                title="Delete Plan"
+                className="p-1.5 text-outline hover:text-error rounded-lg hover:bg-error-container/20 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">delete</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close modal"
+              className="p-1.5 text-outline hover:text-on-surface rounded-lg hover:bg-surface-container transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -159,12 +196,54 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
             </div>
           </div>
 
+          {/* Pay In Full Confirmation Card */}
+          {showPayInFullConfirm ? (
+            <div className="p-4 bg-secondary/15 border border-secondary/40 rounded-2xl space-y-3 animate-fadeIn">
+              <div className="flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-secondary text-2xl shrink-0">
+                  verified
+                </span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-on-surface">
+                    Confirm Pay in Full Early?
+                  </h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    This will settle the remaining balance of{' '}
+                    <strong className="text-on-surface font-mono">{formatCurrency(details.remainingBalance)}</strong>{' '}
+                    ({details.remainingMonths} months) and mark the plan as completed.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowPayInFullConfirm(false)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPayInFull(bill);
+                    setShowPayInFullConfirm(false);
+                    onClose();
+                  }}
+                  className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-base">check_circle</span>
+                  <span>Confirm Settle ({formatCurrency(details.remainingBalance)})</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Schedule Breakdown */}
           <div className="space-y-2 pt-1">
             <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
               Payment Schedule Breakdown ({details.totalMonths} Months)
             </h4>
-            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
               {details.schedule.map((item) => (
                 <div
                   key={item.installmentNumber}
@@ -225,7 +304,7 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-3 border-t border-outline-variant/20 flex gap-2 shrink-0">
+        <div className="pt-3 border-t border-outline-variant/20 flex gap-2 shrink-0 flex-wrap sm:flex-nowrap">
           <button
             type="button"
             onClick={onClose}
@@ -233,7 +312,19 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
           >
             Close
           </button>
-          {!details.isFullyPaid && bill.status !== 'paid' && onPay && (
+
+          {!details.isFullyPaid && onPayInFull && !showPayInFullConfirm && (
+            <button
+              type="button"
+              onClick={() => setShowPayInFullConfirm(true)}
+              className="py-2.5 px-3 rounded-xl text-xs font-semibold bg-surface-container hover:bg-secondary/15 text-secondary border border-secondary/30 transition-colors flex items-center justify-center gap-1"
+            >
+              <span className="material-symbols-outlined text-base">savings</span>
+              <span>Pay in Full ({formatCurrency(details.remainingBalance)})</span>
+            </button>
+          )}
+
+          {!details.isFullyPaid && bill.status !== 'paid' && onPay && !showPayInFullConfirm && (
             <button
               type="button"
               onClick={() => {
@@ -243,7 +334,7 @@ export default function InstallmentDetailModal({ bill, isOpen, onClose, onPay })
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs active:scale-98 transition-all flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined text-base">payments</span>
-              <span>Pay Month {details.currentInstallment} ({formatCurrency(details.monthlyAmount)})</span>
+              <span>Pay Month {details.currentInstallment}</span>
             </button>
           )}
         </div>

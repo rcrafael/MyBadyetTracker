@@ -5,11 +5,15 @@ import {
   payBillInFirestore,
   softDeleteBillInFirestore,
   computeInstallmentEndDate,
+  updateInstallmentPlanInFirestore,
+  payInstallmentInFullInFirestore,
 } from '../services/firestoreService';
 import { useCurrency } from '../context/CurrencyContext';
 import InstallmentDetailModal from '../components/bills/InstallmentDetailModal';
+import InstallmentManagerModal from '../components/bills/InstallmentManagerModal';
+import EditInstallmentModal from '../components/bills/EditInstallmentModal';
 
-function BillCard({ bill, onPay, onDelete, onViewPlan }) {
+function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
   const { formatCurrency } = useCurrency();
   const isInstallment = Boolean(bill.isInstallment);
 
@@ -144,7 +148,9 @@ export default function Bills() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedInstallmentBill, setSelectedInstallmentBill] = useState(null);
+  const [editingPlan, setEditingPlan] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
   // Form mode: 'standard' | 'installment'
@@ -179,6 +185,10 @@ export default function Bills() {
     }
   }
 
+  const installmentPlans = useMemo(() => {
+    return billsList.filter((b) => b.isInstallment);
+  }, [billsList]);
+
   const filteredBills = useMemo(() => {
     if (activeFilter === 'all') return billsList;
     if (activeFilter === 'unpaid') return billsList.filter((b) => b.status !== 'paid');
@@ -211,11 +221,31 @@ export default function Bills() {
     }
   };
 
+  const handlePayInFull = async (plan) => {
+    try {
+      await payInstallmentInFullInFirestore(plan);
+      await loadBills();
+      showToast(`Installment plan "${plan.name}" settled in full early! 🎉`);
+    } catch (err) {
+      showToast('Error settling installment in full.', true);
+    }
+  };
+
+  const handleSaveEditPlan = async (id, updates) => {
+    try {
+      await updateInstallmentPlanInFirestore(id, updates);
+      await loadBills();
+      showToast(`Installment plan "${updates.name}" updated successfully!`);
+    } catch (err) {
+      showToast('Failed to update installment plan.', true);
+    }
+  };
+
   const handleDelete = async (id, name) => {
     try {
       await softDeleteBillInFirestore(id);
       setBillsList((prev) => prev.filter((b) => b.id !== id));
-      showToast(`Bill "${name}" soft-deleted (retained for 6 months).`);
+      showToast(`Bill / Plan "${name}" soft-deleted (retained for 6 months).`);
     } catch (err) {
       showToast('Error deleting bill.', true);
     }
@@ -317,12 +347,39 @@ export default function Bills() {
         </div>
       )}
 
+      {/* Installment Manager Maintenance Modal */}
+      <InstallmentManagerModal
+        isOpen={isManagerOpen}
+        onClose={() => setIsManagerOpen(false)}
+        plans={installmentPlans}
+        onPay={handlePay}
+        onPayInFull={handlePayInFull}
+        onEdit={(plan) => setEditingPlan(plan)}
+        onDelete={handleDelete}
+        onAddNewPlan={() => {
+          setBillType('installment');
+          setIsAddModalOpen(true);
+        }}
+        onViewPlan={(plan) => setSelectedInstallmentBill(plan)}
+      />
+
+      {/* Edit Installment Plan Modal */}
+      <EditInstallmentModal
+        plan={editingPlan}
+        isOpen={!!editingPlan}
+        onClose={() => setEditingPlan(null)}
+        onSave={handleSaveEditPlan}
+      />
+
       {/* Installment Detail Modal */}
       <InstallmentDetailModal
         bill={selectedInstallmentBill}
         isOpen={!!selectedInstallmentBill}
         onClose={() => setSelectedInstallmentBill(null)}
         onPay={handlePay}
+        onPayInFull={handlePayInFull}
+        onEdit={(plan) => setEditingPlan(plan)}
+        onDelete={handleDelete}
       />
 
       {/* Add Bill Modal */}
@@ -554,20 +611,34 @@ export default function Bills() {
 
       {/* Summary Section */}
       <section className="app-card space-y-3">
-        <div className="flex justify-between items-end gap-2">
+        <div className="flex justify-between items-end gap-2 flex-wrap">
           <div>
             <p className="text-xs text-on-surface-variant mb-0.5">Total due this month</p>
             <h2 className="font-headline text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
               {formatCurrency(totalDue)}
             </h2>
           </div>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-secondary text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 text-xs font-semibold hover:bg-secondary/90 active:scale-95 shadow-xs"
-          >
-            <span className="material-symbols-outlined text-base">add</span>
-            <span>New Bill / Plan</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsManagerOpen(true)}
+              className="bg-surface-container hover:bg-surface-container-high text-secondary border border-secondary/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition-all shadow-xs"
+            >
+              <span className="material-symbols-outlined text-base">account_balance</span>
+              <span>Manage Plans</span>
+              {installmentPlans.length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-secondary text-white text-[10px] font-bold flex items-center justify-center">
+                  {installmentPlans.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-secondary text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 text-xs font-semibold hover:bg-secondary/90 active:scale-95 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              <span>New Bill / Plan</span>
+            </button>
+          </div>
         </div>
 
         {/* Progress Track */}
@@ -628,6 +699,8 @@ export default function Bills() {
               key={bill.id}
               bill={bill}
               onPay={handlePay}
+              onPayInFull={handlePayInFull}
+              onEdit={(b) => setEditingPlan(b)}
               onDelete={handleDelete}
               onViewPlan={(b) => setSelectedInstallmentBill(b)}
             />

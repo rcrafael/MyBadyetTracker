@@ -161,6 +161,64 @@ export async function updateBillInFirestore(id, updates, userId = null) {
 }
 
 /**
+ * Update an existing installment plan in Firestore with recalculated end date and total value.
+ */
+export async function updateInstallmentPlanInFirestore(id, updates, userId = null) {
+  try {
+    const totalMonths = updates.totalMonths !== undefined ? parseInt(updates.totalMonths, 10) || 1 : undefined;
+    const monthlyAmt = updates.monthlyAmount !== undefined ? parseFloat(updates.monthlyAmount) || 0 : undefined;
+    const startDate = updates.startDate || updates.dueDate;
+
+    const payload = { ...updates };
+    if (monthlyAmt !== undefined) {
+      payload.amount = monthlyAmt;
+      payload.monthlyAmount = monthlyAmt;
+    }
+    if (totalMonths !== undefined) {
+      payload.totalMonths = totalMonths;
+    }
+    if (startDate && totalMonths) {
+      payload.endDate = computeInstallmentEndDate(startDate, totalMonths);
+    }
+    if (monthlyAmt !== undefined && totalMonths !== undefined) {
+      payload.totalAmount = monthlyAmt * totalMonths;
+    }
+
+    return await updateBillInFirestore(id, payload, userId);
+  } catch (error) {
+    console.error('Error updating installment plan:', error);
+    throw error;
+  }
+}
+
+/**
+ * Pay off an installment plan in full early (Settle Remaining Balance).
+ */
+export async function payInstallmentInFullInFirestore(bill, userId = null) {
+  try {
+    const billId = typeof bill === 'object' ? bill.id : bill;
+    const totalMonths = typeof bill === 'object' ? parseInt(bill.totalMonths, 10) || 1 : 1;
+
+    const updateData = {
+      status: 'paid',
+      paidInstallments: totalMonths,
+      currentInstallment: totalMonths,
+      note: 'Settled in full early',
+      paidAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const docRef = getUserDoc('bills', billId, userId);
+    await updateDoc(docRef, updateData);
+
+    return { id: billId, ...updateData };
+  } catch (error) {
+    console.error('Error paying installment in full:', error);
+    throw error;
+  }
+}
+
+/**
  * Pay a bill.
  * - If standard recurring: schedules the next month's bill (+1 month).
  * - If installment: increments paid count and schedules the next month until totalMonths is reached.
@@ -252,7 +310,7 @@ export async function payBillInFirestore(bill, userId = null) {
 }
 
 /**
- * Soft delete a bill (retained for 6 months).
+ * Soft delete a bill or installment plan (retained for 6 months).
  */
 export async function softDeleteBillInFirestore(id, userId = null) {
   try {
