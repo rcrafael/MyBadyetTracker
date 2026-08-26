@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { generateInstallmentSchedule } from '../../services/firestoreService';
+import DualCurrencyDisplay from '../common/DualCurrencyDisplay';
 
 export default function InstallmentDetailModal({
   bill,
@@ -11,12 +12,13 @@ export default function InstallmentDetailModal({
   onEdit,
   onDelete,
 }) {
-  const { formatCurrency } = useCurrency();
+  const { mainCurrency, formatCurrency } = useCurrency();
   const [showPayInFullConfirm, setShowPayInFullConfirm] = useState(false);
 
   const details = useMemo(() => {
     if (!bill) return null;
 
+    const planCurrency = bill.currency || mainCurrency;
     const totalMonths = parseInt(bill.totalMonths, 10) || 1;
     const currentInstallment = parseInt(bill.currentInstallment, 10) || 1;
     const paidInstallments =
@@ -39,6 +41,7 @@ export default function InstallmentDetailModal({
     const isFullyPaid = paidInstallments >= totalMonths || (bill.status === 'paid' && currentInstallment >= totalMonths);
 
     return {
+      planCurrency,
       totalMonths,
       currentInstallment,
       paidInstallments,
@@ -53,14 +56,14 @@ export default function InstallmentDetailModal({
       schedule,
       isFullyPaid,
     };
-  }, [bill]);
+  }, [bill, mainCurrency]);
 
   if (!isOpen || !bill || !details) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
       <div
-        className="app-card max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-secondary/40 max-h-[90vh] flex flex-col relative"
+        className="app-card max-w-lg w-full p-4 sm:p-6 shadow-2xl border border-secondary/40 max-h-[85vh] sm:max-h-[88vh] flex flex-col relative my-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="installment-details-title"
@@ -81,6 +84,11 @@ export default function InstallmentDetailModal({
                 {bill.bankOrMerchant && (
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-secondary/20 shrink-0">
                     {bill.bankOrMerchant}
+                  </span>
+                )}
+                {details.planCurrency && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant shrink-0">
+                    {details.planCurrency}
                   </span>
                 )}
               </div>
@@ -152,25 +160,39 @@ export default function InstallmentDetailModal({
             </div>
             <div className="flex justify-between items-center text-[11px] text-on-surface-variant pt-1">
               <span>{details.paidInstallments} of {details.totalMonths} months paid</span>
-              <span>{formatCurrency(details.paidBalance)} / {formatCurrency(details.totalAmount)}</span>
+              <span>
+                {formatCurrency(details.paidBalance, details.planCurrency)} / {formatCurrency(details.totalAmount, details.planCurrency)}
+              </span>
             </div>
           </div>
 
-          {/* 4 Key Metrics Grid */}
+          {/* 4 Key Metrics Grid in Dual Currency */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="p-3 rounded-xl bg-surface-container/40 border border-outline-variant/15 space-y-1">
               <p className="text-[11px] text-on-surface-variant font-medium">Monthly Payment</p>
-              <p className="text-sm sm:text-base font-mono font-bold text-on-surface">
-                {formatCurrency(details.monthlyAmount)}
-              </p>
+              <DualCurrencyDisplay
+                amount={details.monthlyAmount}
+                fromCurrency={details.planCurrency}
+                primaryMode="assigned"
+                align="left"
+                mainClassName="text-sm sm:text-base font-mono font-bold text-on-surface"
+                secondaryClassName="text-[10px] font-mono text-outline"
+              />
               <span className="text-[10px] text-outline block">Per month</span>
             </div>
 
             <div className="p-3 rounded-xl bg-surface-container/40 border border-outline-variant/15 space-y-1">
               <p className="text-[11px] text-on-surface-variant font-medium">Remaining Balance</p>
-              <p className="text-sm sm:text-base font-mono font-bold text-error">
-                {formatCurrency(details.remainingBalance)}
-              </p>
+              <DualCurrencyDisplay
+                amount={details.remainingBalance}
+                fromCurrency={details.planCurrency}
+                primaryMode="assigned"
+                align="left"
+                mainClassName={`text-sm sm:text-base font-mono font-bold ${
+                  details.isFullyPaid ? 'text-success' : 'text-error'
+                }`}
+                secondaryClassName="text-[10px] font-mono text-outline"
+              />
               <span className="text-[10px] text-outline block">
                 {details.remainingMonths} months left
               </span>
@@ -178,9 +200,14 @@ export default function InstallmentDetailModal({
 
             <div className="p-3 rounded-xl bg-surface-container/40 border border-outline-variant/15 space-y-1">
               <p className="text-[11px] text-on-surface-variant font-medium">Total Contract Value</p>
-              <p className="text-sm sm:text-base font-mono font-bold text-on-surface">
-                {formatCurrency(details.totalAmount)}
-              </p>
+              <DualCurrencyDisplay
+                amount={details.totalAmount}
+                fromCurrency={details.planCurrency}
+                primaryMode="assigned"
+                align="left"
+                mainClassName="text-sm sm:text-base font-mono font-bold text-on-surface"
+                secondaryClassName="text-[10px] font-mono text-outline"
+              />
               <span className="text-[10px] text-outline block">{details.totalMonths} installments</span>
             </div>
 
@@ -207,11 +234,18 @@ export default function InstallmentDetailModal({
                   <h4 className="text-xs sm:text-sm font-bold text-on-surface">
                     Confirm Pay in Full Early?
                   </h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">
+                  <div className="text-xs text-on-surface-variant mt-0.5">
                     This will settle the remaining balance of{' '}
-                    <strong className="text-on-surface font-mono">{formatCurrency(details.remainingBalance)}</strong>{' '}
+                    <DualCurrencyDisplay
+                      amount={details.remainingBalance}
+                      fromCurrency={details.planCurrency}
+                      primaryMode="assigned"
+                      align="left"
+                      mainClassName="font-mono font-bold text-on-surface inline"
+                      secondaryClassName="text-[10px] font-mono text-outline inline ml-1"
+                    />{' '}
                     ({details.remainingMonths} months) and mark the plan as completed.
-                  </p>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
@@ -232,7 +266,7 @@ export default function InstallmentDetailModal({
                   className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-secondary text-white hover:bg-secondary/90 shadow-xs flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-base">check_circle</span>
-                  <span>Confirm Settle ({formatCurrency(details.remainingBalance)})</span>
+                  <span>Confirm Early Settle</span>
                 </button>
               </div>
             </div>
@@ -278,9 +312,14 @@ export default function InstallmentDetailModal({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-on-surface">
-                      {formatCurrency(item.amount)}
-                    </span>
+                    <DualCurrencyDisplay
+                      amount={item.amount}
+                      fromCurrency={details.planCurrency}
+                      primaryMode="assigned"
+                      align="right"
+                      mainClassName="font-mono font-bold text-on-surface text-xs"
+                      secondaryClassName="text-[10px] font-mono text-outline"
+                    />
                     {item.isPaid ? (
                       <span className="flex items-center gap-0.5 text-[10px] font-bold text-secondary bg-secondary/15 px-2 py-0.5 rounded-full shrink-0">
                         <span className="material-symbols-outlined text-xs">check</span>
@@ -320,7 +359,7 @@ export default function InstallmentDetailModal({
               className="py-2.5 px-3 rounded-xl text-xs font-semibold bg-surface-container hover:bg-secondary/15 text-secondary border border-secondary/30 transition-colors flex items-center justify-center gap-1"
             >
               <span className="material-symbols-outlined text-base">savings</span>
-              <span>Pay in Full ({formatCurrency(details.remainingBalance)})</span>
+              <span>Pay in Full</span>
             </button>
           )}
 

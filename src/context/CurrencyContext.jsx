@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { fetchLiveExchangeRate } from '../services/exchangeRateService';
 
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', locale: 'en-US' },
@@ -36,61 +37,218 @@ const CurrencyContext = createContext();
 
 export function CurrencyProvider({ children }) {
   const { user } = useAuth();
-  const [currency, setCurrencyState] = useState(() => {
-    return localStorage.getItem('mybadyet_currency') || 'USD';
+
+  // Main currency (defaults to USD or saved preference)
+  const [mainCurrency, setMainCurrencyState] = useState(() => {
+    return localStorage.getItem('mybadyet_main_currency') || localStorage.getItem('mybadyet_currency') || 'USD';
   });
 
-  // Load user preference from Firestore if logged in
+  // Secondary currency (defaults to PHP or saved preference)
+  const [secondaryCurrency, setSecondaryCurrencyState] = useState(() => {
+    return localStorage.getItem('mybadyet_secondary_currency') || 'PHP';
+  });
+
+  // Exchange rate: 1 mainCurrency = exchangeRate secondaryCurrency
+  const [exchangeRate, setExchangeRateState] = useState(() => {
+    const saved = localStorage.getItem('mybadyet_exchange_rate');
+    return saved ? parseFloat(saved) : 58.5;
+  });
+
+  const [lastRateUpdated, setLastRateUpdated] = useState(() => {
+    return localStorage.getItem('mybadyet_rate_updated') || null;
+  });
+
+  const [isRateLoading, setIsRateLoading] = useState(false);
+  const initialFetchDone = useRef(false);
+
+  // Helper to fetch and update live rate
+  const fetchAndUpdateRate = useCallback(async (base, target, bypassCache = false) => {
+    if (!base || !target) return;
+    setIsRateLoading(true);
+    try {
+      const result = await fetchLiveExchangeRate(base, target, bypassCache);
+      if (result && typeof result.rate === 'number' && result.rate > 0) {
+        setExchangeRateState(result.rate);
+        setLastRateUpdated(result.timestamp);
+        localStorage.setItem('mybadyet_exchange_rate', String(result.rate));
+        localStorage.setItem('mybadyet_rate_updated', result.timestamp);
+
+        // Optionally persist to Firestore if logged in
+        if (user?.uid) {
+          try {
+            const userRef = doc(db, 'users', user.uid);
+            await setDoc(
+              userRef,
+              { exchangeRate: result.rate, lastRateUpdated: result.timestamp },
+              { merge: true }
+            );
+          } catch (err) {
+            console.warn('Could not sync exchange rate to Firestore:', err);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live exchange rate:', err);
+    } finally {
+      setIsRateLoading(false);
+    }
+  }, [user]);
+
+  // Always fetch fresh live exchange rate on app open / refresh
+  useEffect(() => {
+    if (!initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchAndUpdateRate(mainCurrency, secondaryCurrency, true);
+    }
+  }, [mainCurrency, secondaryCurrency, fetchAndUpdateRate]);
+
+  // Load preferences from Firestore on auth change
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
 
-    async function loadUserCurrency() {
+    async function loadUserCurrencyPreferences() {
       try {
         const userRef = doc(db, 'users', user.uid);
         const snap = await getDoc(userRef);
-        if (snap.exists() && snap.data().currency && isMounted) {
-          const userCur = snap.data().currency;
-          if (CURRENCIES.some((c) => c.code === userCur)) {
-            setCurrencyState(userCur);
-            localStorage.setItem('mybadyet_currency', userCur);
+        if (snap.exists() && isMounted) {
+          const data = snap.data();
+          const userMain = data.mainCurrency || data.currency;
+          const userSec = data.secondaryCurrency;
+
+          let targetMain = mainCurrency;
+          let targetSec = secondaryCurrency;
+
+          if (userMain && CURRENCIES.some((c) => c.code === userMain)) {
+            setMainCurrencyState(userMain);
+            localStorage.setItem('mybadyet_main_currency', userMain);
+            localStorage.setItem('mybadyet_currency', userMain);
+            targetMain = userMain;
           }
+
+          if (userSec && CURRENCIES.some((c) => c.code === userSec)) {
+            setSecondaryCurrencyState(userSec);
+            localStorage.setItem('mybadyet_secondary_currency', userSec);
+            targetSec = userSec;
+          }
+
+          // Fetch fresh rate for the loaded currencies
+          fetchAndUpdateRate(targetMain, targetSec, true);
         }
       } catch (err) {
-        console.warn('Could not fetch currency preference from Firestore:', err);
+        console.warn('Could not fetch currency preferences from Firestore:', err);
       }
     }
 
-    loadUserCurrency();
+    loadUserCurrencyPreferences();
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user, fetchAndUpdateRate]);
 
-  const setCurrency = async (newCode) => {
+  // Sync state to Firestore helper
+  const syncToFirestore = useCallback(
+    async (updates) => {
+      if (!user?.uid) return;
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, updates, { merge: true });
+      } catch (err) {
+        console.warn('Could not save currency preferences to Firestore:', err);
+      }
+    },
+    [user]
+  );
+
+  // Set Main Currency
+  const setMainCurrency = async (newCode) => {
     const found = CURRENCIES.find((c) => c.code === newCode);
     if (!found) return;
 
-    setCurrencyState(newCode);
+    setMainCurrencyState(newCode);
+    localStorage.setItem('mybadyet_main_currency', newCode);
     localStorage.setItem('mybadyet_currency', newCode);
 
-    if (user?.uid) {
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, { currency: newCode }, { merge: true });
-      } catch (err) {
-        console.warn('Could not save currency to Firestore:', err);
-      }
-    }
+    const updates = { mainCurrency: newCode, currency: newCode };
+    await syncToFirestore(updates);
+    await fetchAndUpdateRate(newCode, secondaryCurrency, true);
   };
 
-  const currencyInfo = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
+  // Set Secondary Currency
+  const setSecondaryCurrency = async (newCode) => {
+    const found = CURRENCIES.find((c) => c.code === newCode);
+    if (!found) return;
 
+    setSecondaryCurrencyState(newCode);
+    localStorage.setItem('mybadyet_secondary_currency', newCode);
+
+    const updates = { secondaryCurrency: newCode };
+    await syncToFirestore(updates);
+    await fetchAndUpdateRate(mainCurrency, newCode, true);
+  };
+
+  // Explicit refresh rate button
+  const refreshExchangeRate = async () => {
+    await fetchAndUpdateRate(mainCurrency, secondaryCurrency, true);
+  };
+
+  // Backward compatibility alias: setCurrency updates main currency
+  const setCurrency = setMainCurrency;
+
+  const mainCurrencyInfo = CURRENCIES.find((c) => c.code === mainCurrency) || CURRENCIES[0];
+  const secondaryCurrencyInfo = CURRENCIES.find((c) => c.code === secondaryCurrency) || CURRENCIES[1] || CURRENCIES[0];
+
+  // Backward compatibility alias for single currency readers
+  const currency = mainCurrency;
+  const currencyInfo = mainCurrencyInfo;
+
+  // Conversion Helpers
+  const convertAmount = useCallback(
+    (amount, fromCode, toCode) => {
+      const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+      const from = fromCode || mainCurrency;
+      const to = toCode || secondaryCurrency;
+
+      if (from === to) return num;
+
+      const rate = exchangeRate > 0 ? exchangeRate : 1;
+
+      if (from === mainCurrency && to === secondaryCurrency) {
+        return num * rate;
+      }
+      if (from === secondaryCurrency && to === mainCurrency) {
+        return num / rate;
+      }
+
+      return num;
+    },
+    [mainCurrency, secondaryCurrency, exchangeRate]
+  );
+
+  const convertToMain = useCallback(
+    (amount, fromCurrencyCode) => {
+      const code = fromCurrencyCode || mainCurrency;
+      if (code === mainCurrency) return typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+      return convertAmount(amount, code, mainCurrency);
+    },
+    [mainCurrency, convertAmount]
+  );
+
+  const convertToSecondary = useCallback(
+    (amount, fromCurrencyCode) => {
+      const code = fromCurrencyCode || mainCurrency;
+      if (code === secondaryCurrency) return typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+      return convertAmount(amount, code, secondaryCurrency);
+    },
+    [secondaryCurrency, convertAmount]
+  );
+
+  // Format Currency string
   const formatCurrency = useCallback(
     (amount, customCurrencyCode = null) => {
       const targetCur = customCurrencyCode
-        ? CURRENCIES.find((c) => c.code === customCurrencyCode) || currencyInfo
-        : currencyInfo;
+        ? CURRENCIES.find((c) => c.code === customCurrencyCode) || mainCurrencyInfo
+        : mainCurrencyInfo;
 
       const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
 
@@ -103,17 +261,78 @@ export function CurrencyProvider({ children }) {
         return `${targetCur.symbol}${num.toFixed(2)}`;
       }
     },
-    [currencyInfo]
+    [mainCurrencyInfo]
+  );
+
+  // Dual Currency Formatter
+  const formatDualCurrency = useCallback(
+    ({ amount, fromCurrency = null, primaryMode = 'assigned' }) => {
+      const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+      const nativeCode = fromCurrency || mainCurrency;
+
+      if (primaryMode === 'assigned' || primaryMode === 'native') {
+        // Native assigned currency is primary (bigger), converted opposite is secondary (smaller)
+        const primaryCode = nativeCode;
+        const secondaryCode = nativeCode === secondaryCurrency ? mainCurrency : secondaryCurrency;
+        const secondaryAmt = convertAmount(num, primaryCode, secondaryCode);
+
+        return {
+          primaryFormatted: formatCurrency(num, primaryCode),
+          secondaryFormatted: formatCurrency(secondaryAmt, secondaryCode),
+          primaryCode,
+          secondaryCode,
+          primaryAmount: num,
+          secondaryAmount: secondaryAmt,
+        };
+      }
+
+      // Default main: Main currency is primary (bigger), Secondary currency is smaller below
+      const mainAmt = nativeCode === mainCurrency ? num : convertToMain(num, nativeCode);
+      const secondaryAmt = convertToSecondary(mainAmt, mainCurrency);
+
+      return {
+        primaryFormatted: formatCurrency(mainAmt, mainCurrency),
+        secondaryFormatted: formatCurrency(secondaryAmt, secondaryCurrency),
+        primaryCode: mainCurrency,
+        secondaryCode: secondaryCurrency,
+        primaryAmount: mainAmt,
+        secondaryAmount: secondaryAmt,
+      };
+    },
+    [mainCurrency, secondaryCurrency, convertAmount, convertToMain, convertToSecondary, formatCurrency]
   );
 
   return (
     <CurrencyContext.Provider
       value={{
+        // Dual Currency States
+        mainCurrency,
+        secondaryCurrency,
+        exchangeRate,
+        lastRateUpdated,
+        isRateLoading,
+
+        // Currency Objects
+        mainCurrencyInfo,
+        secondaryCurrencyInfo,
+        currencies: CURRENCIES,
+
+        // Setters & Actions
+        setMainCurrency,
+        setSecondaryCurrency,
+        refreshExchangeRate,
+
+        // Conversion & Formatting
+        convertAmount,
+        convertToMain,
+        convertToSecondary,
+        formatCurrency,
+        formatDualCurrency,
+
+        // Backward compatibility
         currency,
         currencyInfo,
-        currencies: CURRENCIES,
         setCurrency,
-        formatCurrency,
       }}
     >
       {children}

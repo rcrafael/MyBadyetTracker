@@ -88,7 +88,7 @@ export async function getBillsFromFirestore({ status = 'all', includeDeleted = f
 }
 
 /**
- * Add a new bill with support for recurring schedules and installment plans.
+ * Add a new bill with support for recurring schedules, installment plans, and dual currencies.
  */
 export async function addBillToFirestore(data, userId = null) {
   try {
@@ -105,6 +105,7 @@ export async function addBillToFirestore(data, userId = null) {
     const docData = {
       name: data.name,
       amount: monthlyAmt,
+      currency: data.currency || null, // Stores currency code e.g. 'USD' or 'PHP'
       dueDate: data.dueDate || startDate,
       status: data.status || 'upcoming',
       category: data.category || (isInstallment ? 'installment' : 'bills'),
@@ -161,7 +162,7 @@ export async function updateBillInFirestore(id, updates, userId = null) {
 }
 
 /**
- * Update an existing installment plan in Firestore with recalculated end date and total value.
+ * Update an existing installment plan in Firestore with recalculated end date, total value, and currency.
  */
 export async function updateInstallmentPlanInFirestore(id, updates, userId = null) {
   try {
@@ -229,6 +230,7 @@ export async function payBillInFirestore(bill, userId = null) {
     const billId = typeof bill === 'object' ? bill.id : bill;
     const isRecurring = typeof bill === 'object' ? Boolean(bill.recurring) : false;
     const isInstallment = typeof bill === 'object' ? Boolean(bill.isInstallment) : false;
+    const billCurrency = typeof bill === 'object' ? bill.currency : null;
 
     // 1. Mark current as paid
     await updateBillInFirestore(
@@ -259,6 +261,7 @@ export async function payBillInFirestore(bill, userId = null) {
           {
             name: bill.name,
             amount: bill.monthlyAmount || bill.amount,
+            currency: billCurrency,
             monthlyAmount: bill.monthlyAmount || bill.amount,
             totalAmount: bill.totalAmount,
             dueDate: nextDueDateStr,
@@ -291,6 +294,7 @@ export async function payBillInFirestore(bill, userId = null) {
         {
           name: bill.name,
           amount: bill.amount,
+          currency: billCurrency,
           dueDate: nextDueDate.toISOString().split('T')[0],
           status: 'upcoming',
           category: bill.category || 'bills',
