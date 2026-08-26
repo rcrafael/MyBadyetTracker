@@ -1,14 +1,26 @@
-name: Build and Deploy to Firebase Hosting
+name: Build and Deploy to Firebase
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  id-token: write
 
 jobs:
   build_and_deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # Prevents workflow from hanging indefinitely
 
     steps:
       - name: Checkout Code
@@ -34,7 +46,7 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
 
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
