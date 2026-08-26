@@ -695,12 +695,23 @@ export default function Settings() {
             trailing={<Toggle enabled={isDark} onChange={toggleTheme} />}
           />
           <SettingsItem
+            icon="tips_and_updates"
+            label="Daily Budgeting Tip"
+            subtitle="Read today's money-saving and budgeting advice"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-daily-tip'))}
+          />
+          <SettingsItem
             icon="security"
             label="Privacy & Security"
             subtitle="Learn how we protect and isolate your data"
             onClick={() => navigate('/privacy-security')}
           />
-          <SettingsItem icon="help" label="Help & Support" />
+          <SettingsItem
+            icon="help"
+            label="Help & Support"
+            subtitle="Guides, walkthroughs, and FAQs"
+            onClick={() => navigate('/help-support')}
+          />
         </div>
       </section>
 

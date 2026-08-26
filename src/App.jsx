@@ -11,6 +11,7 @@ import Bills from './pages/Bills';
 import Budget from './pages/Budget';
 import Settings from './pages/Settings';
 import PrivacySecurity from './pages/PrivacySecurity';
+import HelpSupport from './pages/HelpSupport';
 import Login from './pages/Login';
 
 function ProtectedRoute({ children }) {
@@ -74,6 +75,7 @@ export default function App() {
                   <Route path="budget" element={<Budget />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="privacy-security" element={<PrivacySecurity />} />
+                  <Route path="help-support" element={<HelpSupport />} />
                 </Route>
 
                 {/* Fallback */}
