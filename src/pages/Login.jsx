@@ -88,7 +88,7 @@ export default function Login() {
       if (!passwordValidation.isValid) {
         setError(
           passwordValidation.errors[0] ||
-            'Please ensure your password meets all security criteria below.'
+          'Please ensure your password meets all security criteria below.'
         );
         return;
       }
@@ -150,24 +150,24 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-6">
         {/* Header Branding */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 bg-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
-            <span className="material-symbols-outlined text-secondary text-3xl">
-              account_balance_wallet
-            </span>
-          </div>
+          <img
+            src="/pwa-192x192.png"
+            alt="MyBadyet Tracker Logo"
+            className="w-16 h-16 rounded-2xl mx-auto mb-3 shadow-md object-cover ring-2 ring-secondary/20"
+          />
           <h1 className="font-headline text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
             {isRegister
               ? 'Create Your Account'
               : isForgot
-              ? 'Set or Reset Password'
-              : 'Welcome to MyBadyetTracker'}
+                ? 'Set or Reset Password'
+                : 'Welcome to My Badyet Tracker'}
           </h1>
           <p className="text-xs sm:text-sm text-on-surface-variant max-w-xs mx-auto">
             {isRegister
               ? 'Start tracking your personal finances with real-time cloud sync'
               : isForgot
-              ? 'Enter your email to receive a secure link to set or reset your password'
-              : 'Precision personal expense & budget tracking powered by Cloud Firestore'}
+                ? 'Enter your email to receive a secure link to set or reset your password'
+                : 'Precision personal expense & budget tracking powered by Cloud Firestore'}
           </p>
         </div>
 
@@ -347,11 +347,10 @@ export default function Login() {
                 </span>
                 <div className="grid grid-cols-1 gap-1">
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.minLength
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.minLength
                         ? 'text-emerald-500 font-medium'
                         : 'text-outline'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.minLength ? 'check_circle' : 'radio_button_unchecked'}
@@ -360,11 +359,10 @@ export default function Login() {
                   </div>
 
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.hasUpper
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.hasUpper
                         ? 'text-emerald-500 font-medium'
                         : 'text-outline'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.hasUpper ? 'check_circle' : 'radio_button_unchecked'}
@@ -373,11 +371,10 @@ export default function Login() {
                   </div>
 
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.hasLower
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.hasLower
                         ? 'text-emerald-500 font-medium'
                         : 'text-outline'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.hasLower ? 'check_circle' : 'radio_button_unchecked'}
@@ -386,11 +383,10 @@ export default function Login() {
                   </div>
 
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.hasNumber
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.hasNumber
                         ? 'text-emerald-500 font-medium'
                         : 'text-outline'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.hasNumber ? 'check_circle' : 'radio_button_unchecked'}
@@ -399,11 +395,10 @@ export default function Login() {
                   </div>
 
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.hasSpecial
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.hasSpecial
                         ? 'text-emerald-500 font-medium'
                         : 'text-outline'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.hasSpecial ? 'check_circle' : 'radio_button_unchecked'}
@@ -412,11 +407,10 @@ export default function Login() {
                   </div>
 
                   <div
-                    className={`flex items-center gap-1.5 ${
-                      passwordValidation.checks.notContainsUserInfo
+                    className={`flex items-center gap-1.5 ${passwordValidation.checks.notContainsUserInfo
                         ? 'text-emerald-500 font-medium'
                         : 'text-error font-medium'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-xs">
                       {passwordValidation.checks.notContainsUserInfo
@@ -443,8 +437,8 @@ export default function Login() {
                     {isRegister
                       ? 'Creating Account...'
                       : isForgot
-                      ? 'Sending Link...'
-                      : 'Signing In...'}
+                        ? 'Sending Link...'
+                        : 'Signing In...'}
                   </span>
                 </>
               ) : (
@@ -452,8 +446,8 @@ export default function Login() {
                   {isRegister
                     ? 'Sign Up'
                     : isForgot
-                    ? 'Send Password Link'
-                    : 'Sign In'}
+                      ? 'Send Password Link'
+                      : 'Sign In'}
                 </span>
               )}
             </button>

@@ -9,6 +9,7 @@ export default function InstallPromptModal() {
     hasNativePrompt,
     promptInstall,
     isStandalone,
+    isInstalled,
   } = useInstall();
 
   const [activeTab, setActiveTab] = useState(platform === 'ios' ? 'ios' : 'android');
@@ -36,11 +37,11 @@ export default function InstallPromptModal() {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-outline-variant/20 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-secondary/15 border border-secondary/30 flex items-center justify-center shrink-0 shadow-xs">
-              <span className="material-symbols-outlined text-secondary text-2xl">
-                install_mobile
-              </span>
-            </div>
+            <img
+              src="/pwa-192x192.png"
+              alt="MyBadyet Icon"
+              className="w-12 h-12 rounded-2xl border border-secondary/30 shadow-xs object-cover shrink-0"
+            />
             <div>
               <h3 id="install-modal-title" className="font-headline text-base sm:text-lg font-bold text-on-surface">
                 Add to Home Screen
@@ -102,11 +103,11 @@ export default function InstallPromptModal() {
 
         {/* Content Body */}
         <div className="overflow-y-auto space-y-4 py-1 flex-1 pr-1 custom-scrollbar">
-          {/* Status banner if already standalone */}
-          {isStandalone && (
+          {/* Status banner if already installed or standalone */}
+          {(isStandalone || isInstalled) && (
             <div className="p-3 bg-secondary/15 border border-secondary/30 rounded-xl flex items-center gap-2.5 text-xs text-on-surface">
               <span className="material-symbols-outlined text-secondary text-lg">check_circle</span>
-              <span>The app is currently running as an installed home screen shortcut!</span>
+              <span>The app is currently installed on this device!</span>
             </div>
           )}
 
