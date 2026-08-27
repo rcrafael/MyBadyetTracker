@@ -4,12 +4,13 @@ export default function InstallSuggestionBanner() {
   const {
     showBanner,
     isStandalone,
+    isInstalled,
     platform,
     promptInstall,
     dismissSuggestion,
   } = useInstall();
 
-  if (!showBanner || isStandalone) return null;
+  if (!showBanner || isStandalone || isInstalled) return null;
 
   return (
     <aside

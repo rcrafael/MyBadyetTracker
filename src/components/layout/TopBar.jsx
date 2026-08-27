@@ -11,11 +11,13 @@ export default function TopBar() {
         {/* Brand */}
         <div
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 cursor-pointer select-none active:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 cursor-pointer select-none active:opacity-80 transition-opacity"
         >
-          <span className="material-symbols-outlined text-secondary text-2xl shrink-0">
-            account_balance_wallet
-          </span>
+          <img
+            src="/pwa-192x192.png"
+            alt="MyBadyet Logo"
+            className="w-8 h-8 rounded-lg shadow-xs object-cover shrink-0 ring-1 ring-secondary/20"
+          />
           <h1 className="font-headline text-lg sm:text-xl font-bold text-secondary tracking-tight">
             My Badyet Tracker
           </h1>

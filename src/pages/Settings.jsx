@@ -13,18 +13,25 @@ import { useCurrency } from '../context/CurrencyContext';
 import { useInstall } from '../context/InstallContext';
 import DualCurrencyDisplay from '../components/common/DualCurrencyDisplay';
 
-function SettingsItem({ icon, label, subtitle, trailing, onClick }) {
+function SettingsItem({ icon, label, subtitle, trailing, onClick, disabled = false }) {
   return (
     <div
-      onClick={onClick}
-      className="flex items-center justify-between p-3.5 sm:p-4 hover:bg-surface-container/50 transition-colors cursor-pointer"
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled}
+      className={`flex items-center justify-between p-3.5 sm:p-4 transition-colors ${
+        disabled
+          ? 'opacity-65 cursor-default bg-surface-container/20'
+          : 'hover:bg-surface-container/50 cursor-pointer'
+      }`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <span className="material-symbols-outlined text-outline text-xl shrink-0">
+        <span className={`material-symbols-outlined text-xl shrink-0 ${disabled ? 'text-outline/60' : 'text-outline'}`}>
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <span className="text-sm font-medium text-on-surface truncate block">{label}</span>
+          <span className={`text-sm font-medium truncate block ${disabled ? 'text-on-surface/80' : 'text-on-surface'}`}>
+            {label}
+          </span>
           {subtitle && (
             <span className="text-xs text-on-surface-variant truncate block">{subtitle}</span>
           )}
@@ -76,7 +83,8 @@ export default function Settings() {
     setSecondaryCurrency,
     refreshExchangeRate,
   } = useCurrency();
-  const { isStandalone, platform, openInstallModal } = useInstall();
+  const { isStandalone, isInstalled, platform, openInstallModal } = useInstall();
+  const isAppInstalled = Boolean(isStandalone || isInstalled);
 
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState(true);
@@ -891,19 +899,20 @@ export default function Settings() {
             icon={platform === 'ios' ? 'phone_iphone' : 'add_to_home_screen'}
             label="Home Screen Shortcut"
             subtitle={
-              isStandalone
-                ? 'Active as installed app'
+              isAppInstalled
+                ? 'App is installed on this device (Installation disabled)'
                 : platform === 'ios'
                 ? 'Add shortcut to iPhone / iPad'
                 : platform === 'android'
                 ? 'Install app on Android'
                 : 'Install app shortcut'
             }
-            onClick={openInstallModal}
+            disabled={isAppInstalled}
+            onClick={isAppInstalled ? undefined : openInstallModal}
             trailing={
-              isStandalone ? (
-                <div className="flex items-center gap-1 text-xs font-semibold text-secondary bg-secondary/15 px-2.5 py-1 rounded-lg">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
+              isAppInstalled ? (
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-secondary/80 bg-secondary/10 px-2.5 py-1 rounded-lg border border-secondary/20 select-none">
+                  <span className="material-symbols-outlined text-sm text-secondary">check_circle</span>
                   <span>Installed</span>
                 </div>
               ) : (
