@@ -78,7 +78,7 @@ export default function InstallmentDetailModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 id="installment-details-title" className="font-headline text-base sm:text-lg font-bold text-on-surface truncate">
+                <h3 id="installment-details-title" className="font-headline text-base sm:text-lg font-bold text-on-surface break-words leading-snug">
                   {bill.name}
                 </h3>
                 {bill.bankOrMerchant && (
