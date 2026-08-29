@@ -14,6 +14,27 @@ import InstallmentManagerModal from '../components/bills/InstallmentManagerModal
 import EditInstallmentModal from '../components/bills/EditInstallmentModal';
 import DualCurrencyDisplay from '../components/common/DualCurrencyDisplay';
 
+// Helper to compute remaining months for an installment plan
+export function getBillRemainingMonths(bill) {
+  if (!bill.isInstallment) return 999999;
+  const totalMonths = parseInt(bill.totalMonths, 10) || 1;
+  const currentInstallment = parseInt(bill.currentInstallment, 10) || 1;
+  const paidCount =
+    bill.paidInstallments !== undefined
+      ? parseInt(bill.paidInstallments, 10)
+      : bill.status === 'paid'
+      ? currentInstallment
+      : currentInstallment - 1;
+  return Math.max(0, totalMonths - paidCount);
+}
+
+// Helper to get bill category type key
+export function getBillTypeKey(bill) {
+  if (bill.isInstallment) return 'plan';
+  if (bill.recurring) return 'recurring';
+  return 'standard';
+}
+
 function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
   const { mainCurrency, secondaryCurrencyInfo } = useCurrency();
   const isInstallment = Boolean(bill.isInstallment);
@@ -51,29 +72,29 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
 
   const totalMonths = parseInt(bill.totalMonths, 10) || 1;
   const currentInstallment = parseInt(bill.currentInstallment, 10) || 1;
-  const paidCount =
-    bill.paidInstallments !== undefined
-      ? parseInt(bill.paidInstallments, 10)
-      : bill.status === 'paid'
-      ? currentInstallment
-      : currentInstallment - 1;
-  const remainingMonths = Math.max(0, totalMonths - paidCount);
+  const remainingMonths = getBillRemainingMonths(bill);
 
   return (
     <div
-      className={`app-card border-l-4 ${config.borderColor} flex items-center justify-between p-3.5 hover:bg-surface-container/40 transition-all duration-150 group`}
+      className={`app-card border-l-4 ${config.borderColor} flex items-start justify-between p-3 hover:bg-surface-container/40 transition-all duration-150 group gap-2`}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      {/* Left: small icon + text */}
+      <div className="flex items-start gap-2 min-w-0 flex-1">
+        {/* Smaller icon to save horizontal space */}
         <div
-          className={`w-10 h-10 rounded-full ${config.iconBg} ${config.iconColor} flex items-center justify-center shrink-0`}
+          className={`w-7 h-7 rounded-lg ${config.iconBg} ${config.iconColor} flex items-center justify-center shrink-0 mt-0.5`}
         >
-          <span className="material-symbols-outlined text-xl">{config.icon}</span>
+          <span className="material-symbols-outlined text-base">{config.icon}</span>
         </div>
-        <div className="min-w-0 flex-1">
+
+        <div className="min-w-0 flex-1 space-y-0.5">
+          {/* Particular / Name — wraps naturally, no truncation */}
+          <h4 className="text-xs sm:text-sm font-bold text-on-surface break-words leading-snug">
+            {bill.name}
+          </h4>
+
+          {/* Badges Row */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs sm:text-sm font-bold text-on-surface truncate">
-              {bill.name}
-            </span>
             {isInstallment ? (
               <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-secondary/15 text-secondary px-1.5 py-0.5 rounded shrink-0">
                 <span className="material-symbols-outlined text-xs">credit_card</span>
@@ -82,10 +103,14 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
             ) : bill.recurring ? (
               <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-surface-container px-1.5 py-0.5 rounded text-outline shrink-0">
                 <span className="material-symbols-outlined text-xs">repeat</span>
-                Monthly
+                Recurring
               </span>
-            ) : null}
-
+            ) : (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-surface-container px-1.5 py-0.5 rounded text-outline shrink-0">
+                <span className="material-symbols-outlined text-xs">receipt_long</span>
+                Standard
+              </span>
+            )}
             {isSecondaryCurrency && (
               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-surface-container-high text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">
                 {billCurrency} Bill
@@ -93,7 +118,8 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
             )}
           </div>
 
-          <p className={`text-xs font-semibold ${config.statusColor} truncate mt-0.5`}>
+          {/* Status & Due Date — one line */}
+          <p className={`text-xs font-semibold ${config.statusColor} whitespace-nowrap overflow-hidden text-ellipsis`}>
             {config.statusText} •{' '}
             {new Date(bill.dueDate).toLocaleDateString('en-US', {
               month: 'short',
@@ -102,21 +128,47 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
             })}
           </p>
 
+          {/* Remaining Months — one line, installment only */}
           {isInstallment && (
-            <p className="text-[11px] text-on-surface-variant truncate mt-0.5">
-              {remainingMonths > 0 ? `${remainingMonths} months remaining` : 'Final installment'}
-              {bill.endDate ? ` • Ends ${new Date(bill.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
+            <p className="text-[11px] font-semibold text-secondary whitespace-nowrap overflow-hidden text-ellipsis">
+              {remainingMonths > 0
+                ? `${remainingMonths} ${remainingMonths === 1 ? 'month' : 'months'} remaining`
+                : 'Final installment'}
             </p>
           )}
 
+          {/* End Month / Year — one line, installment only */}
+          {isInstallment && bill.endDate && (
+            <p className="text-[11px] text-on-surface-variant whitespace-nowrap overflow-hidden text-ellipsis">
+              Ends {new Date(bill.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            </p>
+          )}
+
+          {/* Memo / Note for Standard / Recurring Bills */}
           {bill.note && !isInstallment && (
-            <p className="text-[11px] text-on-surface-variant truncate mt-0.5">{bill.note}</p>
+            <p className="text-[11px] text-on-surface-variant break-words whitespace-pre-wrap">
+              {bill.note}
+            </p>
           )}
         </div>
       </div>
 
-      <div className="text-right shrink-0 flex flex-col items-end gap-1.5 pl-2">
-        {/* Dual Currency Amount (Assigned Currency Bigger, Unassigned / Converted Smaller Below) */}
+      {/* Right: eye (top) → amount → pay → delete */}
+      <div className="shrink-0 flex flex-col items-end gap-1 pl-1">
+        {/* View Plan at top-right — installment only */}
+        {isInstallment ? (
+          <button
+            onClick={() => onViewPlan?.(bill)}
+            className="p-0.5 text-secondary hover:bg-secondary/10 rounded-md opacity-70 group-hover:opacity-100 transition-opacity"
+            title="View installment plan"
+          >
+            <span className="material-symbols-outlined text-sm">visibility</span>
+          </button>
+        ) : (
+          <div className="h-5" />
+        )}
+
+        {/* Amount */}
         <DualCurrencyDisplay
           amount={bill.amount}
           fromCurrency={billCurrency}
@@ -127,32 +179,24 @@ function BillCard({ bill, onPay, onDelete, onViewPlan, onEdit, onPayInFull }) {
           suffix={isInstallment ? '/ mo' : ''}
         />
 
-        <div className="flex items-center gap-1">
-          {isInstallment && (
-            <button
-              onClick={() => onViewPlan?.(bill)}
-              className="text-[11px] font-semibold text-secondary hover:bg-secondary/10 px-2 py-1 rounded-lg transition-colors flex items-center gap-0.5"
-            >
-              <span className="material-symbols-outlined text-sm">visibility</span>
-              <span>Plan</span>
-            </button>
-          )}
-          {bill.status !== 'paid' && (
-            <button
-              onClick={() => onPay?.(bill)}
-              className="bg-secondary text-white px-3 py-1 rounded-lg text-xs font-semibold hover:bg-secondary/90 active:scale-95 transition-all shadow-xs"
-            >
-              Pay Now
-            </button>
-          )}
+        {/* Pay Now */}
+        {bill.status !== 'paid' && (
           <button
-            title="Delete Bill (retained 6 months)"
-            onClick={() => onDelete?.(bill.id, bill.name)}
-            className="p-1 text-outline hover:text-error rounded-md hover:bg-error-container/20 opacity-70 group-hover:opacity-100 transition-opacity"
+            onClick={() => onPay?.(bill)}
+            className="bg-secondary text-white px-3 py-1 rounded-lg text-xs font-semibold hover:bg-secondary/90 active:scale-95 transition-all shadow-xs whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-base">delete</span>
+            Pay Now
           </button>
-        </div>
+        )}
+
+        {/* Delete — below Pay Now */}
+        <button
+          title="Delete Bill (retained 6 months)"
+          onClick={() => onDelete?.(bill.id, bill.name)}
+          className="p-0.5 text-outline hover:text-error rounded-md hover:bg-error-container/20 opacity-60 group-hover:opacity-100 transition-opacity"
+        >
+          <span className="material-symbols-outlined text-sm">delete</span>
+        </button>
       </div>
     </div>
   );
@@ -172,11 +216,14 @@ export default function Bills() {
   const [billsList, setBillsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('type'); // 'type' | 'remainingMonths' | 'dueDate' | 'amount' | 'name'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [selectedInstallmentBill, setSelectedInstallmentBill] = useState(null);
   const [editingPlan, setEditingPlan] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
 
   // Form mode: 'standard' | 'installment'
   const [billType, setBillType] = useState('standard');
@@ -220,14 +267,71 @@ export default function Bills() {
   }, [billsList]);
 
   const filteredBills = useMemo(() => {
-    if (activeFilter === 'all') return billsList;
-    if (activeFilter === 'unpaid') return billsList.filter((b) => b.status !== 'paid');
-    if (activeFilter === 'paid') return billsList.filter((b) => b.status === 'paid');
-    if (activeFilter === 'installments') return billsList.filter((b) => b.isInstallment);
-    if (activeFilter === 'recurring') return billsList.filter((b) => b.recurring && !b.isInstallment);
-    if (activeFilter === 'overdue') return billsList.filter((b) => b.status === 'overdue');
-    return billsList;
-  }, [activeFilter, billsList]);
+    let list = [...billsList];
+
+    // Status / Category filtering
+    if (activeFilter === 'unpaid') list = list.filter((b) => b.status !== 'paid');
+    else if (activeFilter === 'paid') list = list.filter((b) => b.status === 'paid');
+    else if (activeFilter === 'installments') list = list.filter((b) => b.isInstallment);
+    else if (activeFilter === 'recurring') list = list.filter((b) => b.recurring && !b.isInstallment);
+    else if (activeFilter === 'overdue') list = list.filter((b) => b.status === 'overdue');
+
+    // Sorting
+    list.sort((a, b) => {
+      const mult = sortOrder === 'asc' ? 1 : -1;
+
+      if (sortBy === 'type') {
+        const typeOrderAsc = { standard: 1, recurring: 2, plan: 3 };
+        const typeOrderDesc = { plan: 1, recurring: 2, standard: 3 };
+        const orderMap = sortOrder === 'asc' ? typeOrderAsc : typeOrderDesc;
+        const typeA = getBillTypeKey(a);
+        const typeB = getBillTypeKey(b);
+
+        if (typeA !== typeB) {
+          return (orderMap[typeA] || 0) - (orderMap[typeB] || 0);
+        }
+
+        // Inside the same type category:
+        if (typeA === 'plan') {
+          // Installment plans: default to remaining months ascending (fewer months on top)
+          const remA = getBillRemainingMonths(a);
+          const remB = getBillRemainingMonths(b);
+          if (remA !== remB) return remA - remB;
+          return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
+        }
+
+        // For standard & recurring: sort by due date
+        return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
+      }
+
+      if (sortBy === 'remainingMonths') {
+        const remA = getBillRemainingMonths(a);
+        const remB = getBillRemainingMonths(b);
+        if (remA !== remB) return (remA - remB) * mult;
+        return (new Date(a.dueDate || 0) - new Date(b.dueDate || 0)) * mult;
+      }
+
+      if (sortBy === 'dueDate') {
+        const dateA = new Date(a.dueDate || 0).getTime();
+        const dateB = new Date(b.dueDate || 0).getTime();
+        return (dateA - dateB) * mult;
+      }
+
+      if (sortBy === 'amount') {
+        const amtA = parseFloat(a.amount) || 0;
+        const amtB = parseFloat(b.amount) || 0;
+        return (amtA - amtB) * mult;
+      }
+
+      if (sortBy === 'name') {
+        return (a.name || '').localeCompare(b.name || '') * mult;
+      }
+
+      return 0;
+    });
+
+    return list;
+  }, [billsList, activeFilter, sortBy, sortOrder]);
 
   const handlePay = async (bill) => {
     try {
@@ -271,7 +375,15 @@ export default function Bills() {
     }
   };
 
-  const handleDelete = async (id, name) => {
+  // Opens confirmation modal instead of deleting directly
+  const requestDelete = (id, name) => {
+    setDeleteConfirm({ id, name });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    const { id, name } = deleteConfirm;
+    setDeleteConfirm(null);
     try {
       await softDeleteBillInFirestore(id);
       setBillsList((prev) => prev.filter((b) => b.id !== id));
@@ -385,6 +497,44 @@ export default function Bills() {
           }`}
         >
           <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="app-card max-w-sm w-full p-5 shadow-2xl border border-error/30 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-error-container flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-on-error-container text-xl">delete_forever</span>
+              </div>
+              <div>
+                <h3 className="font-headline text-sm font-bold text-on-surface">Are you sure?</h3>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  You're about to delete{' '}
+                  <span className="font-semibold text-on-surface">&ldquo;{deleteConfirm.name}&rdquo;</span>.
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2 rounded-xl text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="flex-1 py-2 rounded-xl text-xs font-semibold bg-error text-white hover:bg-error/90 active:scale-98 transition-all shadow-xs flex items-center justify-center gap-1"
+              >
+                <span className="material-symbols-outlined text-sm">delete</span>
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -744,25 +894,58 @@ export default function Bills() {
         </div>
       </section>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar py-1 px-1 -mx-1">
-        {filters.map((f) => {
-          const filterKey = f === 'All Bills' ? 'all' : f.toLowerCase();
-          const isSelected = activeFilter === filterKey;
-          return (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(filterKey)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${
-                isSelected
-                  ? 'bg-primary text-white dark:bg-primary-fixed dark:text-primary-container shadow-xs'
-                  : 'bg-surface-container-high/60 text-on-surface-variant hover:bg-surface-container'
-              }`}
+      {/* Filter Tabs & Sorting Toolbar */}
+      <div className="space-y-2">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar py-1 px-1 -mx-1">
+          {filters.map((f) => {
+            const filterKey = f === 'All Bills' ? 'all' : f.toLowerCase();
+            const isSelected = activeFilter === filterKey;
+            return (
+              <button
+                key={f}
+                onClick={() => setActiveFilter(filterKey)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 ${
+                  isSelected
+                    ? 'bg-primary text-white dark:bg-primary-fixed dark:text-primary-container shadow-xs'
+                    : 'bg-surface-container-high/60 text-on-surface-variant hover:bg-surface-container'
+                }`}
+              >
+                {f}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort Controls Bar */}
+        <div className="flex items-center justify-between gap-2 px-1 text-xs w-full">
+          <div className="flex items-center gap-1.5 text-on-surface-variant min-w-0 flex-1">
+            <span className="material-symbols-outlined text-sm text-outline shrink-0">sort</span>
+            <span className="font-semibold text-[11px] shrink-0">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs py-1 px-2 rounded-lg border border-outline-variant/20 outline-none focus:ring-1 focus:ring-secondary cursor-pointer min-w-0 flex-1 max-w-[150px] sm:max-w-[200px] truncate"
             >
-              {f}
-            </button>
-          );
-        })}
+              <option value="type">Bill Type</option>
+              <option value="remainingMonths">Remaining Mos</option>
+              <option value="dueDate">Due Date</option>
+              <option value="amount">Amount</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            className="bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface px-2.5 py-1 rounded-lg border border-outline-variant/20 font-semibold text-[11px] flex items-center gap-1 transition-colors shrink-0"
+            title={sortOrder === 'asc' ? 'Ascending (fewer months / earliest date / A-Z)' : 'Descending'}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+            </span>
+            <span>{sortOrder === 'asc' ? 'Asc' : 'Desc'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Bill Cards */}
@@ -792,7 +975,7 @@ export default function Bills() {
               onPay={handlePay}
               onPayInFull={handlePayInFull}
               onEdit={(b) => setEditingPlan(b)}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               onViewPlan={(b) => setSelectedInstallmentBill(b)}
             />
           ))

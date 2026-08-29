@@ -68,6 +68,10 @@ export default function InstallmentManagerModal({
         paidBalanceInMain,
         remainingBalanceInMain,
       };
+    }).sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+      if (a.remainingMonths !== b.remainingMonths) return a.remainingMonths - b.remainingMonths;
+      return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
     });
   }, [plans, mainCurrency, convertToMain]);
 
@@ -320,7 +324,7 @@ export default function InstallmentManagerModal({
                 <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-bold text-on-surface font-headline truncate">
+                      <h4 className="text-sm font-bold text-on-surface font-headline break-words leading-tight">
                         {plan.name}
                       </h4>
                       {plan.bankOrMerchant && (
