@@ -277,7 +277,7 @@ export default function InstallmentDetailModal({
             <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
               Payment Schedule Breakdown ({details.totalMonths} Months)
             </h4>
-            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="space-y-1.5">
               {details.schedule.map((item) => (
                 <div
                   key={item.installmentNumber}
