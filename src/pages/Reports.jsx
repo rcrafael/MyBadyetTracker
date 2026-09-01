@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { getTransactionsFromFirestore } from '../services/firestoreService';
 import * as XLSX from 'xlsx';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default function Reports() {
   const { user } = useAuth();
@@ -13,6 +14,7 @@ export default function Reports() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState(null);
   const [tip, setTip] = useState('');
 
@@ -48,7 +50,7 @@ export default function Reports() {
     });
   };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     const filtered = getFilteredTransactions();
 
     // Calculate total
@@ -61,12 +63,38 @@ export default function Reports() {
       categorySummary[cat] = (categorySummary[cat] || 0) + (parseFloat(t.amount) || 0);
     });
 
-    // Determine tip
-    if (Object.keys(categorySummary).length > 0) {
-      const highestCategory = Object.keys(categorySummary).reduce((a, b) => categorySummary[a] > categorySummary[b] ? a : b);
-      setTip(`Tip: You spent the most on "${highestCategory}" (${mainCurrencyInfo.symbol}${categorySummary[highestCategory].toFixed(2)}). Consider reducing expenses in this category to save more!`);
-    } else {
+    // Agentic AI Tip Generation
+    if (filtered.length > 0) {
+      setAnalyzing(true);
       setTip('');
+      try {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Missing Gemini API Key in environment variables.");
+        }
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const prompt = `
+          Act as a helpful and insightful financial advisor. I am generating a ${reportType} expense report.
+          Here is a summary of my spending by category in ${mainCurrencyInfo.code}:
+          ${JSON.stringify(categorySummary, null, 2)}
+          Total Spent: ${totalAmount.toFixed(2)} ${mainCurrencyInfo.code}
+
+          Analyze this spending data and provide a concise, meaningful, and actionable tip (max 2-3 sentences) on how I might improve my spending habits or reduce expenses based on these specific categories and amounts.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        setTip(response.text());
+      } catch (err) {
+        console.error("AI Analysis Error:", err);
+        setTip("Could not generate AI tip at this time. Please check your API key and connection.");
+      } finally {
+        setAnalyzing(false);
+      }
+    } else {
+      setTip("No transactions found for this period to analyze.");
     }
 
     // Export to Excel
@@ -163,15 +191,20 @@ export default function Reports() {
 
         <button
           onClick={generateReport}
-          disabled={loading}
-          className="w-full bg-secondary text-white text-sm font-semibold py-3 rounded-xl shadow hover:bg-secondary/90 transition-colors"
+          disabled={loading || analyzing}
+          className="w-full bg-secondary text-white text-sm font-semibold py-3 rounded-xl shadow hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2"
         >
-          Generate & Download Report
+          {analyzing && <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>}
+          <span>{analyzing ? 'Analyzing Data & Generating Report...' : 'Generate & Download Report'}</span>
         </button>
 
         {tip && (
-          <div className="p-4 bg-secondary-container text-on-secondary-container rounded-xl text-sm mt-4">
-            <strong>💡 Insight:</strong> {tip}
+          <div className="p-4 bg-secondary-container text-on-secondary-container rounded-xl text-sm mt-4 animate-fadeIn">
+            <strong className="flex items-center gap-1 mb-1 text-secondary">
+              <span className="material-symbols-outlined text-base">smart_toy</span>
+              AI Advisor Insight:
+            </strong>
+            <p className="leading-relaxed">{tip}</p>
           </div>
         )}
       </div>
