@@ -9,6 +9,7 @@ import Transactions from './pages/Transactions';
 import AddExpense from './pages/AddExpense';
 import Bills from './pages/Bills';
 import Budget from './pages/Budget';
+import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PrivacySecurity from './pages/PrivacySecurity';
 import HelpSupport from './pages/HelpSupport';
@@ -73,6 +74,7 @@ export default function App() {
                   <Route path="add" element={<AddExpense />} />
                   <Route path="bills" element={<Bills />} />
                   <Route path="budget" element={<Budget />} />
+                  <Route path="reports" element={<Reports />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="privacy-security" element={<PrivacySecurity />} />
                   <Route path="help-support" element={<HelpSupport />} />
