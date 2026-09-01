@@ -1,9 +1,24 @@
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function TopBar() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   return (
     <header className="w-full top-0 sticky z-40 bg-surface/95 dark:bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 shadow-xs">
@@ -24,10 +39,10 @@ export default function TopBar() {
         </div>
 
         {/* User Info & Settings */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 relative" ref={dropdownRef}>
           {user && (
             <button
-              onClick={() => navigate('/settings')}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 p-1 pl-2 pr-1.5 rounded-full hover:bg-surface-container transition-colors max-w-[150px] sm:max-w-[200px]"
             >
               <span className="text-xs font-semibold text-on-surface truncate hidden sm:inline">
@@ -54,6 +69,32 @@ export default function TopBar() {
           >
             <span className="material-symbols-outlined text-xl">settings</span>
           </button>
+
+          {/* Dropdown Menu */}
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-surface dark:bg-surface-container rounded-xl shadow-lg border border-outline-variant/20 z-50 overflow-hidden">
+              <button
+                onClick={() => {
+                  setDropdownOpen(false);
+                  navigate('/reports');
+                }}
+                className="w-full text-left px-4 py-3 text-sm font-medium text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-base">assessment</span>
+                Reports
+              </button>
+              <button
+                onClick={() => {
+                  setDropdownOpen(false);
+                  navigate('/settings');
+                }}
+                className="w-full text-left px-4 py-3 text-sm font-medium text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border-t border-outline-variant/20"
+              >
+                <span className="material-symbols-outlined text-base">settings</span>
+                Settings
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
