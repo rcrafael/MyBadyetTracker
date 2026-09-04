@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import tipsData from '../../data/dailyTips.json';
 
 const STORAGE_KEY_LAST_DATE = 'mybadyet_last_tip_date';
-const STORAGE_KEY_TODAY_TIP_ID = 'mybadyet_today_tip_id';
 const STORAGE_KEY_TIPS_ENABLED = 'mybadyet_daily_tips_enabled';
 
 /**
@@ -38,19 +37,12 @@ export default function DailyTipModal() {
     // If already shown today, do not auto-popup
     if (lastTipDate === todayStr) return;
 
-    // Pick or retrieve today's tip
+    // Pick today's random tip
     const tipsList = tipsData.tips || [];
     if (tipsList.length === 0) return;
 
-    let savedTipId = localStorage.getItem(STORAGE_KEY_TODAY_TIP_ID);
-    let chosenTip = tipsList.find((t) => String(t.id) === String(savedTipId));
-
-    if (!chosenTip) {
-      // Pick random tip for today
-      const randomIndex = Math.floor(Math.random() * tipsList.length);
-      chosenTip = tipsList[randomIndex];
-      localStorage.setItem(STORAGE_KEY_TODAY_TIP_ID, String(chosenTip.id));
-    }
+    const randomIndex = Math.floor(Math.random() * tipsList.length);
+    const chosenTip = tipsList[randomIndex];
 
     setCurrentTip(chosenTip);
 
@@ -72,11 +64,8 @@ export default function DailyTipModal() {
         const found = tipsList.find((t) => t.id === e.detail.tipId);
         if (found) setCurrentTip(found);
       } else {
-        // Pick today's tip or random
-        const savedTipId = localStorage.getItem(STORAGE_KEY_TODAY_TIP_ID);
-        const chosen =
-          tipsList.find((t) => String(t.id) === String(savedTipId)) ||
-          tipsList[Math.floor(Math.random() * tipsList.length)];
+        // Pick random tip
+        const chosen = tipsList[Math.floor(Math.random() * tipsList.length)];
         setCurrentTip(chosen);
       }
       setIsOpen(true);
@@ -102,7 +91,6 @@ export default function DailyTipModal() {
 
     const nextTip = tipsList[nextIndex];
     setCurrentTip(nextTip);
-    localStorage.setItem(STORAGE_KEY_TODAY_TIP_ID, String(nextTip.id));
   };
 
   if (!isOpen || !currentTip) return null;
